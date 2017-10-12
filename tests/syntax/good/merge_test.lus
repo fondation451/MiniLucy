@@ -1,0 +1,11 @@
+node merge_bool_alt(clk : bool ; i1 : int when clk ; i2 : int when not clk)
+returns (y: int);
+let
+  y = merge clk (true -> i1) (false-> i2);
+tel
+
+node merge_bool_ter(clk : bool ; i1 : int when clk ; i2 : int when not clk)
+returns (y: int);
+let
+  y = merge clk (false-> i2) (true -> i1) ;
+tel
