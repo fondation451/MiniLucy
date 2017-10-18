@@ -40,6 +40,7 @@ Clément PASCUTTO <clement.pascutto@ens.fr>
 %token END
 %token EOF
 %token EQUAL
+%token FBY
 %token NEQ
 %token REAL
 %token <string> IDENT
@@ -192,6 +193,7 @@ expr:
 |expr OR expr {mk_expr (PE_op (Op_or, [$1; $3]))}
 |expr IMPL expr {mk_expr (PE_op (Op_impl, [$1; $3]))}
 |expr ARROW expr {mk_expr (PE_arrow ($1, $3))}
+|expr FBY expr {mk_expr (PE_arrow ($1, mk_expr (PE_pre ($3))))}
 |MINUS expr /* %prec uminus */ {mk_expr (PE_op (Op_sub, [$2]))}
 |NOT expr {mk_expr (PE_op (Op_not, [$2]))}
 |PRE expr {mk_expr (PE_pre ($2))}
