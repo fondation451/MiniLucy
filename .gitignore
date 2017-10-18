@@ -1,0 +1,6 @@
+# Compiled files
+*.cmi
+*.cmo
+*.automaton
+*.conflicts
+minilucy
