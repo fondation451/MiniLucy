@@ -18,8 +18,9 @@ Clément PASCUTTO <clement.pascutto@ens.fr>
   open Parsing;;
 
   let loc () = symbol_start_pos (), symbol_end_pos ();;
-  let mk_expr e = {pexpr_desc = e; pexpr_loc = loc ()};;
+  let mk_expr e = {pexpr_desc = e; pexpr_clk = None; pexpr_loc = loc ()};;
   let mk_patt p = {ppatt_desc = p; ppatt_loc = loc ()};;
+  let mk_param id ty ck = {param_id = id; param_ty = ty; param_ck = ck;};;
 
 %}
 
@@ -144,13 +145,18 @@ param_list_semicol:
 
 
 param:
-  |ident_comma_list COLON typ WHEN expr
-    {let typ = $3 in
+  |ident_comma_list COLON typ WHEN clock_expr
+    {let ty = $3 in
      let clk = $5 in
-     List.map (fun id -> (id, typ, Some(clk))) $1}
+     List.map (fun id -> mk_param id ty (Some(clk))) $1}
   |ident_comma_list COLON typ
     {let typ = $3 in
-     List.map (fun id -> (id, typ, None)) $1}
+     List.map (fun id -> mk_param id typ (Some(CK_base))) $1}
+;
+
+clock_expr:
+  |IDENT {CK_on(CK_base, true, $1)}
+  |NOT IDENT {CK_on(CK_base, false, $2)}
 ;
 
 eq_list:

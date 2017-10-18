@@ -16,6 +16,10 @@ exception Merge_Inconsistency;;
 
 type location = Lexing.position * Lexing.position;;
 
+type ident = string;;
+
+exception Variable_Not_Found of ident;;
+
 type base_ty =
   |Tbool
   |Tint
@@ -30,6 +34,12 @@ type const =
   |Creal of float
 ;;
 
+type clock_t =
+  |CK_base
+  |CK_on of clock_t * bool * ident
+  |CK_tuple of clock_t list
+;;
+
 type op =
   |Op_eq |Op_neq |Op_lt |Op_le |Op_gt |Op_ge
   |Op_add |Op_sub |Op_mul |Op_div |Op_mod
@@ -38,11 +48,10 @@ type op =
   |Op_and |Op_or |Op_impl
 ;;
 
-type ident = string;;
-
 type p_expr = {
-  pexpr_desc: p_expr_desc;
-  pexpr_loc: location;
+  pexpr_desc : p_expr_desc;
+  pexpr_clk : clock_t option;
+  pexpr_loc : location;
 }
 and p_expr_desc =
   |PE_const of const
@@ -72,11 +81,17 @@ type p_equation = {
   peq_expr: p_expr;
 };;
 
+type param = {
+  param_id : ident;
+  param_ty : base_ty;
+  param_ck : clock_t option;
+}
+
 type p_node = {
   pn_name: ident;
-  pn_input: (ident * base_ty * p_expr option) list;
-  pn_output: (ident * base_ty * p_expr option) list;
-  pn_local: (ident * base_ty * p_expr option) list;
+  pn_input: param list;
+  pn_output: param list;
+  pn_local: param list;
   pn_equs: p_equation list;
   pn_loc: location;
 };;

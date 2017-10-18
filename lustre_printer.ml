@@ -15,6 +15,15 @@ Clément PASCUTTO <clement.pascutto@ens.fr
 open Format;;
 open Ast;;
 
+let print_separated_list print_fn sep l =
+  let rec aux = function
+    | [] -> ()
+    | [h] -> print_fn h;
+    | h::t -> print_fn h; print_string sep; aux t;
+  in
+  aux l
+;;
+
 let print_id = print_string;;
 
 let print_type t =
@@ -31,13 +40,17 @@ let print_const c =
   |Creal(f) -> print_float f
 ;;
 
-let print_separated_list print_fn sep l =
-  let rec aux = function
-    | [] -> ()
-    | [h] -> print_fn h;
-    | h::t -> print_fn h; print_string sep; aux t;
-  in
-  aux l
+let rec print_ck_const ck_const =
+  match ck_const with
+  |CK_base -> ()
+  |CK_on(ck_const', b, id) ->
+    print_string " when ";
+    if not b then print_string "not ";
+    print_id id
+  |CK_tuple(ck_const_l) ->
+    print_string "(";
+    print_separated_list print_ck_const ", " ck_const_l;
+    print_string ")"
 ;;
 
 let string_of_op o =
@@ -117,15 +130,12 @@ let print_equation e =
 ;;
 
 let print_var_decl v =
-  let ident, base_ty, when_expr = v in
-  print_id ident;
+  print_id v.param_id;
   print_string ": ";
-  print_type base_ty;
-  (match when_expr with
+  print_type v.param_ty;
+  (match v.param_ck with
    |None -> ()
-   |Some(e) ->
-     print_string " when ";
-     print_expr e)
+   |Some(ck_const) -> print_ck_const ck_const)
 ;;
 
 let print_node n =
