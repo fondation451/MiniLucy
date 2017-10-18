@@ -18,7 +18,7 @@ make
 To run the automatic test :
 
 ```
-./auto_test.sh minilucy
+make test
 ```
 
 ## Authors
