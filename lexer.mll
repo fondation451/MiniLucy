@@ -24,13 +24,11 @@ Clément PASCUTTO <clement.pascutto@ens.fr>
     let h = Hashtbl.create 17 in
     List.iter (fun (s,k) -> Hashtbl.add h s k) [
       "and", AND;
-      "bool", BOOL;
       "const", CONST;
       "current", CURRENT;
       "div", DIV;
       "else", ELSE;
       "end", END;
-      "false", CONST_BOOL(false);
       "fby", FBY;
       "if", IF;
       "int", INT;
@@ -45,7 +43,7 @@ Clément PASCUTTO <clement.pascutto@ens.fr>
       "returns", RETURNS;
       "tel", TEL;
       "then", THEN;
-      "true", CONST_BOOL(true);
+      "type", TYPE;
       "var", VAR;
       "when", WHEN;
     ];

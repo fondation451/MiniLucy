@@ -83,7 +83,7 @@ let () =
       localisation (Lexing.lexeme_start_p buf);
       eprintf "Merge Inconsistency";
       exit 1
-    |_ ->
+    (*|_ ->
       eprintf "Unknown Error@.";
-      exit 2
+      exit 2*)
 ;;

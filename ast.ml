@@ -20,23 +20,29 @@ type ident = string;;
 
 exception Variable_Not_Found of ident;;
 
-type base_ty =
-  |Tbool
+module TypeMap = Map.Make(struct
+  type t = ident;;
+  let compare = String.compare;;
+end);;
+
+type lustre_ty =
   |Tint
   |Treal
+  |Ttype of ident
 ;;
 
-type ty = base_ty list;;
+type enum_ty = string list option;;
+
+type ty = lustre_ty list;;
 
 type const =
-  |Cbool of bool
   |Cint of int
   |Creal of float
 ;;
 
 type clock_t =
   |CK_base
-  |CK_on of clock_t * bool * ident
+  |CK_on of clock_t * ident * ident
   |CK_tuple of clock_t list
 ;;
 
@@ -62,9 +68,9 @@ and p_expr_desc =
   |PE_arrow of p_expr * p_expr
   |PE_pre of p_expr
   |PE_tuple of p_expr list
-  |PE_when of p_expr * p_expr
+  |PE_when of p_expr * ident * p_expr
   |PE_current of p_expr
-  |PE_merge of ident * p_expr * p_expr (* (clock, true case, false case) *)
+  |PE_merge of ident * (ident * p_expr) list
 ;;
 
 type p_patt = {
@@ -83,7 +89,7 @@ type p_equation = {
 
 type param = {
   param_id : ident;
-  param_ty : base_ty;
+  param_ty : lustre_ty;
   param_ck : clock_t option;
 }
 
@@ -98,4 +104,4 @@ type p_node = {
 
 type p_const = ident * p_expr;;
 
-type p_file = p_const list * p_node list;;
+type p_file = enum_ty TypeMap.t * p_const list * p_node list;;

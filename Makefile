@@ -6,6 +6,9 @@ FLAGS=
 
 all: $(BIN)
 
+test:
+	./auto_test.sh minilucy
+
 #$(BIN): $(CMX)
 
 $(BIN): $(CMO_I)

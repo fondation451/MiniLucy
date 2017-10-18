@@ -28,14 +28,13 @@ let print_id = print_string;;
 
 let print_type t =
   match t with
-  |Tbool -> print_string "bool"
   |Tint -> print_string "int"
   |Treal -> print_string "real"
+  |Ttype(id) -> print_id id
 ;;
 
 let print_const c =
   match c with
-  |Cbool(b) -> if b then print_string "true" else print_string "false"
   |Cint(i) -> print_int i
   |Creal(f) -> print_float f
 ;;
@@ -43,10 +42,12 @@ let print_const c =
 let rec print_ck_const ck_const =
   match ck_const with
   |CK_base -> ()
-  |CK_on(ck_const', b, id) ->
+  |CK_on(ck_const', enum_id, id) ->
     print_string " when ";
-    if not b then print_string "not ";
-    print_id id
+    print_id enum_id;
+    print_string "(";
+    print_id id;
+    print_string ")"
   |CK_tuple(ck_const_l) ->
     print_string "(";
     print_separated_list print_ck_const ", " ck_const_l;
@@ -104,21 +105,26 @@ let rec print_expr e =
     print_string "(";
     print_separated_list print_expr ", " exp_l;
     print_string ")"
-  |PE_when(e, e') ->
+  |PE_when(e, id, e') ->
     print_expr e;
     print_string " when ";
-    print_expr e'
+    print_id id;
+    print_string "(";
+    print_expr e';
+    print_string ")"
   |PE_current(e) ->
     print_string "current ";
     print_expr e
-  |PE_merge(id, e, e') ->
+  |PE_merge(id, e_l) ->
     print_string "merge ";
     print_id id;
-    print_string " (true -> ";
-    print_expr e;
-    print_string ") (false -> ";
-    print_expr e';
-    print_string ")"
+    print_string " ";
+    print_separated_list (fun (id, e) ->
+                            print_string "(";
+                            print_id id;
+                            print_string " -> ";
+                            print_expr e;
+                            print_string ")") " " e_l
 ;;
 
 let print_equation e =
@@ -172,7 +178,7 @@ let print_const_dec const_dec =
 ;;
 
 let print_lustre f =
-  let const_decs, node_decs = f in
+  let type_decs, const_decs, node_decs = f in
   open_hovbox 0;
     print_separated_list print_const_dec ";\n" const_decs;
     print_newline ();
