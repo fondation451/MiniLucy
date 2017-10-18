@@ -23,30 +23,30 @@ Clément PASCUTTO <clement.pascutto@ens.fr>
   let id_or_keyword =
     let h = Hashtbl.create 17 in
     List.iter (fun (s,k) -> Hashtbl.add h s k) [
-	    "and", AND;
-	    "bool", BOOL;
-	    "const", CONST;
+      "and", AND;
+      "bool", BOOL;
+      "const", CONST;
       "current", CURRENT;
       "div", DIV;
-	    "else", ELSE;
-	    "end", END;
-	    "false", CONST_BOOL(false);
+      "else", ELSE;
+      "end", END;
+      "false", CONST_BOOL(false);
       "fby", FBY;
-	    "if", IF;
-	    "int", INT;
-	    "let", LET;
+      "if", IF;
+      "int", INT;
+      "let", LET;
       "merge", MERGE;
-	    "mod", MOD;
-	    "node", NODE;
-	    "not", NOT;
-	    "or", OR;
+      "mod", MOD;
+      "node", NODE;
+      "not", NOT;
+      "or", OR;
       "pre", PRE;
-	    "real", REAL;
-	    "returns", RETURNS;
-	    "tel", TEL;
-	    "then", THEN;
-	    "true", CONST_BOOL(true);
-	    "var", VAR;
+      "real", REAL;
+      "returns", RETURNS;
+      "tel", TEL;
+      "then", THEN;
+      "true", CONST_BOOL(true);
+      "var", VAR;
       "when", WHEN;
     ];
     fun s -> try Hashtbl.find h s with Not_found -> IDENT s
@@ -63,7 +63,7 @@ let digit = ['0'-'9']
 let exponent = ('e' | 'E') ('+' | '-')? digit+
 let float = digit+ '.' digit* exponent?
           | digit* '.'digit+ exponent?
-	  | digit+ exponent
+    | digit+ exponent
 let ident = alpha (alpha | '_' | digit)*
 
 rule token = parse

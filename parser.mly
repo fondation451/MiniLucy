@@ -1,6 +1,6 @@
 (*
 ########
-Copyright © 2017
+Copyright ï¿½ 2017
 
 This file is part of MiniLucy.
 MiniLucy is free software: you can redistribute it and/or modify
@@ -8,7 +8,7 @@ it under the terms of the GNU General Public License v3 as published by
 the Free Software Foundation.
 
 Nicolas ASSOUAD <nicolas.assouad@ens.fr>
-Clément PASCUTTO <clement.pascutto@ens.fr>
+Clï¿½ment PASCUTTO <clement.pascutto@ens.fr>
 ########
 *)
 
@@ -81,7 +81,7 @@ Clément PASCUTTO <clement.pascutto@ens.fr>
 %nonassoc NOT PRE                             /* not pre */
 %left DOT
 
-/* Point d'entrée */
+/* Point d'entrï¿½e */
 
 %start file
 %type <Ast.p_file> file
@@ -112,11 +112,11 @@ node:
  local_params
  LET eq_list TEL semi_opt
   {{pn_name = $2;
-	  pn_input = $4;
-	  pn_output = $8;
-	  pn_local = $11;
-	  pn_equs = $13;
-	  pn_loc = loc();}}
+    pn_input = $4;
+    pn_output = $8;
+    pn_local = $11;
+    pn_equs = $13;
+    pn_loc = loc();}}
 ;
 
 in_params:
