@@ -1,9 +1,9 @@
 node ck4 (a: int; b: bool)
 returns (c: int);
 let
-  c = ck4_clk(a when b, b);
+  c = ck4_clk(a when True(b), b);
 tel
-node ck4_clk (a: int when b; b: bool)
+node ck4_clk (a: int when True(b); b: bool)
 returns (c: int);
 let
   c = current(a);

@@ -1,11 +1,11 @@
 node use_current(x: bool; y: bool)
 returns (z: bool);
 let
-  z = current(current_clk(x,y when x));
+  z = current(current_clk(x,y when True(x)));
 tel
 
-node current_clk(x: bool; y: bool when x)
-returns (z: bool when x);
+node current_clk(x: bool; y: bool when True(x))
+returns (z: bool when True(x));
 let
   z = y;
 tel

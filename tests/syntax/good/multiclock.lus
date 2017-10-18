@@ -2,16 +2,16 @@ node multiclock ( x, y: int; c: bool; z: int )
         returns ( s: int);
 
 let
-  s = current(multiclock_clk ( x, y, c, z when c ));
+  s = current(multiclock_clk ( x, y, c, z when True(c) ));
 tel
 
-node multiclock_clk ( x, y: int; c: bool; z: int when c )
-        returns ( s: int when c);
-var h: bool when c ;
-    u: int when h ;
+node multiclock_clk ( x, y: int; c: bool; z: int when True(c) )
+        returns ( s: int when True(c));
+var h: bool when True(c) ;
+    u: int when True(h) ;
 let
-  h = ( true when c ) -> ( ( x + y ) when c) < z ;
-  u = ( z when h ) -> moyenne( z when h,  pre u ) ;
+  h = ( True when True(c) ) -> ( ( x + y ) when True(c)) < z ;
+  u = ( z when True(h) ) -> moyenne( z when True(h),  pre u ) ;
   s = current u ;
 tel
 

@@ -1,15 +1,15 @@
 node ck7(a: bool; m,n:int)
 returns(q:int; r: int);
 var
-  r_on_a : int when a;
+  r_on_a : int when True(a);
 let
   (q, r_on_a) = ck7_clk(a,m,n);
   r = current (r_on_a);
 tel
 
 node ck7_clk(a: bool; m,n:int)
-returns(q:int; r: int when a);
+returns(q:int; r: int when True(a));
 let
 	q = m+n;
-	r = q when a;
+	r = q when True(a);
 tel

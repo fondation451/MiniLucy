@@ -1,14 +1,14 @@
 node ck3 (a: bool; b: bool; c: bool)
 returns (x: bool);
 var
-  b_on_a : bool when a;
+  b_on_a : bool when True(a);
 let
-  b_on_a = b when a;
-  x = ck3_clk(a,b when a, c when b_on_a);
+  b_on_a = b when True(a);
+  x = ck3_clk(a,b when True(a), c when True(b_on_a));
 tel
 
 
-node ck3_clk (a: bool; b: bool when a; c: bool when b)
+node ck3_clk (a: bool; b: bool when True(a); c: bool when True(b))
 returns (x: bool);
 let
   x = current(current(c));

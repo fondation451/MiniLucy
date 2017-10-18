@@ -1,9 +1,9 @@
--- true after x has been true once
+-- True after x has been True once
 node after(x: bool) returns (after: bool);
 let
-   after = x or (false -> pre after);
+   after = x or (False -> pre after);
 tel
-  
+
 node use_fby(x: bool) returns (res: bool);
 let
   res = after(x);

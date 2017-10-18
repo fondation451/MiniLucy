@@ -6,7 +6,7 @@ let
   time = 0 -> if reset then 0
               else if running and time_unit then pre(time)+1
               else pre(time);
-  running = false -> if start_stop then not pre(running)
+  running = False -> if start_stop then not pre(running)
                      else pre(running);
 tel
 
@@ -18,9 +18,9 @@ var running, frozen, start_stop, reset, lap: bool;
 let
   (internal_time, running) =
       simple_stopwatch(time_unit, reset, start_stop);
-  frozen = false -> if lap then not pre(frozen) else pre(frozen);
+  frozen = False -> if lap then not pre(frozen) else pre(frozen);
   start_stop = b1;
-  reset = b2 and (true-> not pre(running or frozen));
-  lap = b2 and (false -> pre(running or frozen));
+  reset = b2 and (True-> not pre(running or frozen));
+  lap = b2 and (False -> pre(running or frozen));
   time = if frozen then pre(time) else internal_time;
 tel

@@ -42,16 +42,16 @@ let
     if noneoftree(V12, V13, V23) then FAILURE else
     if oneoftree(V12, V13, V23) then Median(T1, T2, T3) else
     if alloftree(V12, V13, V23) then Median(T1, T2, T3) else
-    -- 2 among V1, V2, V3 are false
+    -- 2 among V1, V2, V3 are False
     if V12 then Average(T1, T2) else
     if V13 then Average(T1, T3) else
-                -- V23 is necessarily true,  hence T1 is wrong
+                -- V23 is necessarily True,  hence T1 is wrong
                 Average(T2, T3) ;
 
-  Heat_on = true ->
-    if Tguess = FAILURE then false else
-    if Tguess < TMIN    then true  else
-    if Tguess > TMAX    then false else
+  Heat_on = True ->
+    if Tguess = FAILURE then False else
+    if Tguess < TMIN    then True  else
+    if Tguess > TMAX    then False else
                         pre Heat_on;
 tel
 
@@ -61,13 +61,13 @@ tel
 node not_a_sauna(T,  T1, T2, T3 : real; Heat_on: bool) returns (ok:bool);
 
 let
-  ok = true -> pre T < TMAX + 1.0 ;
+  ok = True -> pre T < TMAX + 1.0 ;
 tel
 
 node not_a_sauna2(T,  T1, T2, T3 : real; Heat_on: bool) returns (ok:bool);
 
 let
-  ok = true -> pre T < TMAX - 6.0 ;
+  ok = True -> pre T < TMAX - 6.0 ;
 tel
 
 
