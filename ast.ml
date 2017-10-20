@@ -12,11 +12,11 @@ Clément PASCUTTO <clement.pascutto@ens.fr>
 ########
 *)
 
-exception Merge_Inconsistency;;
-
 type location = Lexing.position * Lexing.position;;
 
 type ident = string;;
+
+let ident_from_string str = str;;
 
 exception Variable_Not_Found of ident;;
 
@@ -63,12 +63,11 @@ and p_expr_desc =
   |PE_const of const
   |PE_ident of ident
   |PE_op of op * p_expr list
-  |PE_if of p_expr * p_expr * p_expr
   |PE_app of ident * p_expr list
   |PE_arrow of p_expr * p_expr
   |PE_pre of p_expr
   |PE_tuple of p_expr list
-  |PE_when of p_expr * ident * p_expr
+  |PE_when of p_expr * ident * ident
   |PE_current of p_expr
   |PE_merge of ident * (ident * p_expr) list
 ;;
@@ -102,6 +101,6 @@ type p_node = {
   pn_loc: location;
 };;
 
-type p_const = ident * p_expr;;
+type p_const = ident * const;;
 
 type p_file = enum_ty TypeMap.t * p_const list * p_node list;;

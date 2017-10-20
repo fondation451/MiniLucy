@@ -17,6 +17,7 @@ Clément PASCUTTO <clement.pascutto@ens.fr>
   open Lexing;;
   open Parser;;
   open Ast;;
+  open Ast_lustre;;
 
   exception Lexical_error of string;;
 

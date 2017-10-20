@@ -14,6 +14,7 @@ Clément PASCUTTO <clement.pascutto@ens.fr
 
 open Format;;
 open Ast;;
+open Ast_lustre;;
 
 let print_separated_list print_fn sep l =
   let rec aux = function
@@ -73,6 +74,120 @@ let string_of_op o =
   |Op_impl -> "=>"
 ;;
 
+let rec print_expr_lustre e =
+  match e.pexpr_lustre_desc with
+  |PEL_const(c) -> print_const c
+  |PEL_ident(id) -> print_id id
+  |PEL_op(op, exp_l) ->
+    print_string "(";
+    print_separated_list print_expr_lustre (" " ^ (string_of_op op) ^ " ") exp_l;
+    print_string ")"
+  |PEL_if(e, e', e'') ->
+    print_string "if ";
+    print_expr_lustre e;
+    print_string " then ";
+    print_expr_lustre e';
+    print_string " else ";
+    print_expr_lustre e''
+  |PEL_app(id, exp_l) ->
+    print_id id;
+    print_string "(";
+    print_separated_list print_expr_lustre ", " exp_l;
+    print_string ")"
+  |PEL_arrow(e, e') ->
+    print_expr_lustre e;
+    print_string " -> ";
+    print_expr_lustre e'
+  |PEL_pre(e) ->
+    print_string "pre (";
+    print_expr_lustre e;
+    print_string ")"
+  |PEL_tuple(exp_l) ->
+    print_string "(";
+    print_separated_list print_expr_lustre ", " exp_l;
+    print_string ")"
+  |PEL_when(e, id, e') ->
+    print_expr_lustre e;
+    print_string " when ";
+    print_id id;
+    print_string "(";
+    print_expr_lustre e';
+    print_string ")"
+  |PEL_current(e) ->
+    print_string "current ";
+    print_expr_lustre e
+  |PEL_merge(id, e_l) ->
+    print_string "merge ";
+    print_id id;
+    print_string " ";
+    print_separated_list (fun (id, e) ->
+                            print_string "(";
+                            print_id id;
+                            print_string " -> ";
+                            print_expr_lustre e;
+                            print_string ")") " " e_l
+;;
+
+let print_equation_lustre e =
+  (match e.peq_lustre_patt.ppatt_desc with
+     |PP_ident(id) -> print_id id
+     |PP_tuple(id_l) -> print_separated_list print_id ", " id_l);
+  print_string " = ";
+  print_expr_lustre e.peq_lustre_expr
+;;
+
+let print_var_decl v =
+  print_id v.param_id;
+  print_string ": ";
+  print_type v.param_ty;
+  (match v.param_ck with
+   |None -> ()
+   |Some(ck_const) -> print_ck_const ck_const)
+;;
+
+let print_node_lustre n =
+  print_string "node ";
+  print_id n.pn_lustre_name;
+  print_space ();
+  print_string "(";
+  print_separated_list print_var_decl ", " n.pn_lustre_input;
+  print_string ")";
+  print_space ();
+  print_string "returns (";
+  print_separated_list print_var_decl ", " n.pn_lustre_output;
+  print_string ");\n";
+  print_string "var ";
+  open_hovbox 2;
+    print_separated_list print_var_decl ";\n" n.pn_lustre_local;
+    print_string ";\n";
+  close_box ();
+  print_string "let";
+  print_newline ();
+  open_hovbox 2;
+    print_separated_list print_equation_lustre ";\n" n.pn_lustre_equs;
+    print_string ";\n";
+  close_box ();
+  print_string "tel"
+;;
+
+let print_const_dec const_dec =
+  let id, c = const_dec in
+  print_string "const ";
+  print_id id;
+  print_string " = ";
+  print_const c
+;;
+
+let print_lustre f =
+  let type_decs, const_decs, node_decs = f in
+  open_hovbox 0;
+    print_separated_list print_const_dec ";\n" const_decs;
+    print_newline ();
+    print_separated_list print_node_lustre "\n\n" node_decs;
+    print_newline ();
+  close_box ()
+;;
+
 let rec print_expr e =
   match e.pexpr_desc with
   |PE_const(c) -> print_const c
@@ -81,13 +196,6 @@ let rec print_expr e =
     print_string "(";
     print_separated_list print_expr (" " ^ (string_of_op op) ^ " ") exp_l;
     print_string ")"
-  |PE_if(e, e', e'') ->
-    print_string "if ";
-    print_expr e;
-    print_string " then ";
-    print_expr e';
-    print_string " else ";
-    print_expr e''
   |PE_app(id, exp_l) ->
     print_id id;
     print_string "(";
@@ -105,12 +213,12 @@ let rec print_expr e =
     print_string "(";
     print_separated_list print_expr ", " exp_l;
     print_string ")"
-  |PE_when(e, id, e') ->
+  |PE_when(e, id, id') ->
     print_expr e;
     print_string " when ";
     print_id id;
     print_string "(";
-    print_expr e';
+    print_id id';
     print_string ")"
   |PE_current(e) ->
     print_string "current ";
@@ -133,15 +241,6 @@ let print_equation e =
      |PP_tuple(id_l) -> print_separated_list print_id ", " id_l);
   print_string " = ";
   print_expr e.peq_expr
-;;
-
-let print_var_decl v =
-  print_id v.param_id;
-  print_string ": ";
-  print_type v.param_ty;
-  (match v.param_ck with
-   |None -> ()
-   |Some(ck_const) -> print_ck_const ck_const)
 ;;
 
 let print_node n =
@@ -169,15 +268,7 @@ let print_node n =
   print_string "tel"
 ;;
 
-let print_const_dec const_dec =
-  let id, e = const_dec in
-  print_string "const ";
-  print_id id;
-  print_string " = ";
-  print_expr e
-;;
-
-let print_lustre f =
+let print f =
   let type_decs, const_decs, node_decs = f in
   open_hovbox 0;
     print_separated_list print_const_dec ";\n" const_decs;

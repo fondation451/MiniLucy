@@ -60,11 +60,16 @@ let () =
   let buf = Lexing.from_channel f in
 
   try
-    let p = Parser.file Lexer.token buf in
+    let p_lustre = Parser.file Lexer.token buf in
+    let p = Ast_lustre_to_ast.convert p_lustre in
     close_in f;
 
     if !parse_only then begin
-      Lustre_printer.print_lustre p;
+      Lustre_printer.print_lustre p_lustre;
+      print_newline ();
+      print_newline ();
+      print_newline ();
+      Lustre_printer.print p;
       exit 0;
     end;
 
@@ -78,10 +83,6 @@ let () =
     |Parser.Error ->
       localisation (Lexing.lexeme_start_p buf);
   	  eprintf "Syntax error@.";
-      exit 1
-    |Ast.Merge_Inconsistency ->
-      localisation (Lexing.lexeme_start_p buf);
-      eprintf "Merge Inconsistency";
       exit 1
     (*|_ ->
       eprintf "Unknown Error@.";
