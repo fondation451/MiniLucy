@@ -24,4 +24,5 @@ make test
 ## Authors
 
 * **Nicolas ASSOUAD** - *Initial work* - [fondation451](https://github.com/fondation451)
+* **Ismail LAHKIM BENNANI** - *Initial work* - [ismailbennani](https://github.com/ismailbennani)
 * **Clément PASCUTTO** - *Initial work* - [pascutto](https://github.com/pascutto)
