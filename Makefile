@@ -1,5 +1,5 @@
-CMO_I=ast.cmo lustre_printer.cmo parser.cmi parser.cmo lexer.cmo main.cmo
-CMO=ast.cmo lustre_printer.cmo parser.cmo lexer.cmo main.cmo
+CMO_I=ast.cmo ast_lustre.cmo lustre_printer.cmo ast_lustre_to_ast.cmo synchronous_check.cmo parser.cmi parser.cmo lexer.cmo main.cmo
+CMO=ast.cmo ast_lustre.cmo lustre_printer.cmo ast_lustre_to_ast.cmo synchronous_check.cmo parser.cmo lexer.cmo main.cmo
 GENERATED = lexer.ml parser.ml parser.mli
 BIN=minilucy
 FLAGS=
