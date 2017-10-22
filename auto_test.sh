@@ -4,22 +4,23 @@ shopt -s nullglob
 
 # Test script for lus2rs
 
-option=$2
-compiler=$1
+option=$1
+compiler=minilucy
 score=0
 max=0
 verbose=0
 
-echo "Test de $1"
+echo -n "Test de $compiler"
 
+echo
 echo
 
 compile () {
 if [[ $verbose != 0 ]]; then
-  echo Compiling $1 $2
-  ./$compiler $1 $2;
+  echo Compiling $2 $3
+  ./$compiler $2 $3;
 else
-  ./$compiler $1 $2 > /dev/null 2>&1;
+  ./$compiler $2 $3 > /dev/null 2>&1;
 fi;
 }
 
@@ -27,11 +28,12 @@ part1 () {
 
 score=0
 max=0
+ext=$1
 
-echo "Part 1: syntactic analysis"
+echo "Part 1: $ext syntactic analysis"
 
 echo -n "Bad cases "
-for f in tests/syntax/bad/*.lus; do
+for f in tests/syntax/bad/*.$ext; do
     echo -n ".";
     max=`expr $max + 1`;
     compile --parse-only $f;
@@ -49,7 +51,7 @@ echo
 
 # les bons
 echo -n "Good cases "
-for f in tests/syntax/good/*.lus; do
+for f in tests/syntax/good/*.$ext; do
     echo -n ".";
     max=`expr $max + 1`;
     compile --parse-only $f;
@@ -67,13 +69,25 @@ echo
 
 percent=`expr 100 \* $score / $max`;
 
-echo -n "Part 1: $score/$max : $percent%"; }
+echo -n "Part 1 ($ext): $score/$max : $percent%"; }
+
+test () {
+  ext=$1
+  part1 $ext
+}
 
 case $option in
     "-v" )
-      verbose=1;
-      part1;;
-    * )
-      part1;;
+      verbose=1;;
+    *    )
+      verbose=0;;
 esac
+
+test lus
+
+echo
+echo
+
+test elus
+
 echo
