@@ -1,0 +1,3 @@
+b = merge c
+  | True -> 1
+  | False -> 0

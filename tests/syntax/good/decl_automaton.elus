@@ -1,0 +1,3 @@
+automaton
+  | S0 -> do a = 1
+  | S1 -> let a = 1 in do b = a + 1

@@ -51,8 +51,9 @@ let () =
     exit 1
   end;
 
-  if not (Filename.check_suffix !input_file ".lus") then begin
-    eprintf "The input file must be a .lus file\n@?";
+  if not (Filename.check_suffix !input_file ".lus"
+      || (Filename.check_suffix !input_file ".elus")) then begin
+    eprintf "The input file must be a .lus or a .elus file\n@?";
     Arg.usage options usage;
     exit 1
   end;
@@ -61,44 +62,63 @@ let () =
   let f = open_in !input_file in
   let buf = Lexing.from_channel f in
 
-  try
-    let p_lustre = Parser.file Lexer.token buf in
-    let p = Ast_lustre_to_ast.convert p_lustre in
-    close_in f;
+  if (Filename.check_suffix !input_file ".lus") then begin
+    try
+      let p_lustre = Parser.file Lexer.token buf in
+      let p = Ast_lustre_to_ast.convert p_lustre in
+      close_in f;
 
-    if !parse_only then begin
-      Lustre_printer.print_lustre p_lustre;
-      print_newline ();
-      print_newline ();
-      print_newline ();
+      if !parse_only then begin
+        Lustre_printer.print_lustre p_lustre;
+        print_newline ();
+        print_newline ();
+        print_newline ();
+        Lustre_printer.print p;
+        exit 0;
+      end;
+
       Lustre_printer.print p;
+      Synchronous_check.check_clock_file p;
+
+      if !clock_only then begin
+        exit 0;
+      end;
+
       exit 0;
-    end;
-
-    Lustre_printer.print p;
-    Synchronous_check.check_clock_file p;
-
-    if !clock_only then begin
-      exit 0;
-    end;
-
-    exit 0;
-  with
-    |Lexer.Lexical_error(str) ->
-      localisation (Lexing.lexeme_start_p buf);
-      eprintf "Lexing error@.";
-      Printf.printf "%s\n" str;
-      exit 1
-    |Parser.Error ->
-      localisation (Lexing.lexeme_start_p buf);
-  	  eprintf "Syntax error@.";
-      exit 1
+    with
+      |Lexer.Lexical_error(str) ->
+        (localisation (Lexing.lexeme_start_p buf);
+        eprintf "Lexing error@.";
+        Printf.printf "%s\n" str;
+        exit 1)
+      |Parser.Error ->
+        localisation (Lexing.lexeme_start_p buf);
+    	  eprintf "Syntax error@.";
+        exit 1
     |Synchronous_check.Bad_Clock(loc, str) ->
       localisation (fst loc);
       eprintf "Clock error@.";
       Printf.printf "%s\n" str;
       exit 1
-    (*|_ ->
-      eprintf "Unknown Error@.";
-      exit 2*)
+  end else begin
+    try
+      let p_elustre = Eparser.file Elexer.token buf in
+      close_in f;
+
+      if !parse_only then begin
+        Elustre_printer.print_elustre p_elustre;
+      end;
+
+      exit 0;
+    with
+      |Elexer.Lexical_error(str) ->
+        (localisation (Lexing.lexeme_start_p buf);
+        eprintf "Lexing error@.";
+        Printf.printf "%s\n" str;
+        exit 1)
+      |Eparser.Error ->
+        localisation (Lexing.lexeme_start_p buf);
+        eprintf "Syntax error@.";
+        exit 1
+  end
 ;;

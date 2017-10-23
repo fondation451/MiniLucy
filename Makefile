@@ -1,6 +1,11 @@
-CMO_I=ast.cmo ast_lustre.cmo lustre_printer.cmo type.cmo synchronous_check.cmo parser.cmi parser.cmo lexer.cmo main.cmo
-CMO=ast.cmo ast_lustre.cmo lustre_printer.cmo type.cmo synchronous_check.cmo parser.cmo lexer.cmo main.cmo
-GENERATED = lexer.ml parser.ml parser.mli
+LUS_I=ast.cmo ast_lustre.cmo lustre_printer.cmo type.cmo synchronous_check.cmo parser.cmi parser.cmo lexer.cmo main.cmo
+LUS=ast.cmo ast_lustre.cmo lustre_printer.cmo type.cmo synchronous_check.cmo parser.cmo lexer.cmo main.cmo
+ELUS_I=east.cmo elustre_printer.cmo eparser.cmi eparser.cmo elexer.cmo
+ELUS=east.cmo elustre_printer.cmo eparser.cmo elexer.cmo
+COMMON_I=main.cmo
+COMMON=main.cmo
+GENERATED_LUS=lexer.ml parser.ml parser.mli parser.automaton parser.conflicts
+GENERATED_ELUS=elexer.ml eparser.ml eparser.mli eparser.automaton eparser.conflicts
 BIN=minilucy
 FLAGS=
 
@@ -11,8 +16,8 @@ test:
 
 #$(BIN): $(CMX)
 
-$(BIN): $(CMO_I)
-	ocamlc $(FLAGS) -o $(BIN) $(CMO)
+$(BIN): $(LUS_I) $(ELUS_I) $(COMMON_I)
+	ocamlc $(FLAGS) -o $(BIN) $(LUS) $(ELUS) $(COMMON)
 
 .SUFFIXES: .mli .ml .cmi .cmo .mll .mly
 
@@ -32,7 +37,7 @@ $(BIN): $(CMO_I)
 	menhir --infer -v $<
 
 clean:
-	rm -f *.cm[io] *.o *~ $(BIN) $(GENERATED) parser.automaton parser.conflicts .depend
+	rm -f *.cm[io] *.o *~ $(BIN) $(GENERATED_LUS) $(GENERATED_ELUS) .depend
 
 #.depend depend: $(GENERATED)
 #	rm -f .depend
