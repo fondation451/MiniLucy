@@ -69,11 +69,74 @@ percent=`expr 100 \* $score / $max`;
 
 echo -n "Part 1: $score/$max : $percent%"; }
 
+
+part2 () {
+
+score=0
+max=0
+
+echo "Part 2: clock analysis"
+
+echo -n "Bad cases "
+for f in tests/syntax/bad/*.lus; do
+    echo -n ".";
+    max=`expr $max + 1`;
+    compile --clock $f;
+    case $? in
+	"0")
+	echo
+	echo "FAIL on "$f" (should have been rejected)";;
+	"1") score=`expr $score + 1`;;
+	*)
+	echo
+	echo "COMPILER FAIL on "$f"";
+    esac
+done
+echo
+
+# les bons
+echo -n "Good cases "
+for f in tests/syntax/good/*.lus; do
+    echo -n ".";
+    max=`expr $max + 1`;
+    compile --clock $f;
+    case $? in
+	"1")
+	echo
+	echo "FAIL on "$f" (should have been accepted)";;
+	"0") score=`expr $score + 1`;;
+	*)
+	echo
+  echo "COMPILER FAIL on "$f"";;
+    esac
+done
+echo
+
+percent=`expr 100 \* $score / $max`;
+
+echo -n "Part 2: $score/$max : $percent%"; }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 case $option in
     "-v" )
       verbose=1;
-      part1;;
+      part1;
+      part2;;
     * )
-      part1;;
+      part1;
+      part2;;
 esac
 echo

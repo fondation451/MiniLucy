@@ -18,6 +18,7 @@ open Format;;
 (*open Lustre_printer*)
 
 let parse_only = ref false;;
+let clock_only = ref false;;
 let type_only = ref false;;
 
 let verbose = ref false;;
@@ -31,6 +32,7 @@ let set_file f s = f := s;;
 
 let options = [
   "--parse-only", Arg.Set parse_only, "  Execute only syntactic analysis";
+  "--clock", Arg.Set clock_only, "  Execute only clock verification";
   "-v", Arg.Set verbose, "  Verbose mode"
 ];;
 
@@ -73,16 +75,28 @@ let () =
       exit 0;
     end;
 
+    Lustre_printer.print p;
+    Synchronous_check.check_clock_file p;
+
+    if !clock_only then begin
+      exit 0;
+    end;
+
     exit 0;
   with
     |Lexer.Lexical_error(str) ->
-      (localisation (Lexing.lexeme_start_p buf);
+      localisation (Lexing.lexeme_start_p buf);
       eprintf "Lexing error@.";
       Printf.printf "%s\n" str;
-      exit 1)
+      exit 1
     |Parser.Error ->
       localisation (Lexing.lexeme_start_p buf);
   	  eprintf "Syntax error@.";
+      exit 1
+    |Synchronous_check.Bad_Clock(loc, str) ->
+      localisation (fst loc);
+      eprintf "Clock error@.";
+      Printf.printf "%s\n" str;
       exit 1
     (*|_ ->
       eprintf "Unknown Error@.";
