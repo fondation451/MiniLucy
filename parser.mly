@@ -19,7 +19,7 @@ Cl�ment PASCUTTO <clement.pascutto@ens.fr>
   open Parsing;;
 
   let loc () = symbol_start_pos (), symbol_end_pos ();;
-  let mk_expr e = {pexpr_lustre_desc = e; pexpr_lustre_clk = None; pexpr_lustre_loc = loc ()};;
+  let mk_expr e = {pexpr_lustre_desc = e; pexpr_lustre_clk = CK_free; pexpr_lustre_loc = loc ()};;
   let mk_patt p = {ppatt_desc = p; ppatt_loc = loc ()};;
   let mk_param id ty ck = {param_id = id; param_ty = ty; param_ck = ck;};;
 
@@ -93,13 +93,13 @@ file: type_decs const_decs node_decs EOF {($1, $2, $3)}
 ;
 
 type_decs:
-  |/* empty */ {TypeMap.add "bool" (Some ["True" ; "False"]) TypeMap.empty}
-  |type_dec type_decs {let ty, ty_val = $1 in TypeMap.add ty ty_val $2}
+  |/* empty */ {IdentMap.add "bool" ["True" ; "False"] IdentMap.empty}
+  |type_dec type_decs {let ty, ty_val = $1 in IdentMap.add ty ty_val $2}
 ;
 
 type_dec:
-  |TYPE IDENT SEMICOL {($2, None)}
-  |TYPE; ty = IDENT; EQUAL; enum_val = separated_list(PLUS, IDENT); SEMICOL {(ty, Some(enum_val))}
+  |TYPE IDENT SEMICOL {($2, [])}
+  |TYPE; ty = IDENT; EQUAL; enum_val = separated_list(PLUS, IDENT); SEMICOL {(ty, enum_val)}
 ;
 
 const_decs:
@@ -165,9 +165,9 @@ param_list_semicol:
 
 param:
   |param = ident_comma_list; COLON; ty = typ; WHEN; id1 = IDENT; LPAREN; id2 = IDENT; RPAREN
-    {List.map (fun name -> mk_param name ty (Some(CK_on(CK_base, id1, id2)))) param}
+    {List.map (fun name -> mk_param name ty (CK_on(CK_base, id1, id2))) param}
   |param = ident_comma_list; COLON; ty = typ
-    {List.map (fun name -> mk_param name ty (Some(CK_base))) param}
+    {List.map (fun name -> mk_param name ty CK_base) param}
 ;
 
 clock_expr:
@@ -195,22 +195,22 @@ expr:
 |IDENT {mk_expr (PEL_ident $1)}
 |IDENT LPAREN expr_comma_list_empty RPAREN {mk_expr (PEL_app ($1, $3))}
 |IF expr THEN expr ELSE expr {mk_expr (PEL_if ($2, $4, $6))}
-|expr PLUS expr {mk_expr (PEL_op (Op_add, [$1; $3]))}
-|expr MINUS expr {mk_expr (PEL_op (Op_sub, [$1; $3]))}
-|expr STAR expr {mk_expr (PEL_op (Op_mul, [$1; $3]))}
-|expr SLASH expr {mk_expr (PEL_op (Op_div, [$1; $3]))}
-|expr DIV expr {mk_expr (PEL_op (Op_div, [$1; $3]))}
-|expr MOD expr {mk_expr (PEL_op (Op_mod, [$1; $3]))}
-|expr COMP expr {mk_expr (PEL_op ($2, [$1; $3]))}
-|expr EQUAL expr {mk_expr (PEL_op (Op_eq, [$1; $3]))}
-|expr NEQ expr {mk_expr (PEL_op (Op_neq, [$1; $3]))}
-|expr AND expr {mk_expr (PEL_op (Op_and, [$1; $3]))}
-|expr OR expr {mk_expr (PEL_op (Op_or, [$1; $3]))}
-|expr IMPL expr {mk_expr (PEL_op (Op_impl, [$1; $3]))}
+|expr PLUS expr {mk_expr (PEL_binop (Op_add, $1, $3))}
+|expr MINUS expr {mk_expr (PEL_binop (Op_sub, $1, $3))}
+|expr STAR expr {mk_expr (PEL_binop (Op_mul, $1, $3))}
+|expr SLASH expr {mk_expr (PEL_binop (Op_div, $1, $3))}
+|expr DIV expr {mk_expr (PEL_binop (Op_div, $1, $3))}
+|expr MOD expr {mk_expr (PEL_binop (Op_mod, $1, $3))}
+|expr COMP expr {mk_expr (PEL_binop ($2, $1, $3))}
+|expr EQUAL expr {mk_expr (PEL_binop (Op_eq, $1, $3))}
+|expr NEQ expr {mk_expr (PEL_binop (Op_neq, $1, $3))}
+|expr AND expr {mk_expr (PEL_binop (Op_and, $1, $3))}
+|expr OR expr {mk_expr (PEL_binop (Op_or, $1, $3))}
+|expr IMPL expr {mk_expr (PEL_binop (Op_impl, $1, $3))}
 |expr ARROW expr {mk_expr (PEL_arrow ($1, $3))}
 |expr FBY expr {mk_expr (PEL_arrow ($1, mk_expr (PEL_pre ($3))))}
-|MINUS expr /* %prec uminus */ {mk_expr (PEL_op (Op_sub, [$2]))}
-|NOT expr {mk_expr (PEL_op (Op_not, [$2]))}
+|MINUS expr /* %prec uminus */ {mk_expr (PEL_op (UOp_minus, $2))}
+|NOT expr {mk_expr (PEL_op (UOp_not, $2))}
 |PRE expr {mk_expr (PEL_pre ($2))}
 |LPAREN expr COMMA expr_comma_list RPAREN {mk_expr (PEL_tuple ($2::$4))}
 |e1 = expr; WHEN; id = IDENT; LPAREN; e2 = expr; RPAREN {mk_expr (PEL_when (e1, id, e2))}

@@ -18,8 +18,8 @@ open Format;;
 (*open Lustre_printer*)
 
 let parse_only = ref false;;
-let clock_only = ref false;;
 let type_only = ref false;;
+let clock_only = ref false;;
 
 let verbose = ref false;;
 
@@ -32,7 +32,8 @@ let set_file f s = f := s;;
 
 let options = [
   "--parse-only", Arg.Set parse_only, "  Execute only syntactic analysis";
-  "--clock", Arg.Set clock_only, "  Execute only clock verification";
+  "--type-only", Arg.Set type_only, "  Execute only typing";
+  "--clock-only", Arg.Set clock_only, "  Execute only clock verification";
   "-v", Arg.Set verbose, "  Verbose mode"
 ];;
 
@@ -40,6 +41,16 @@ let localisation pos =
   let l = pos.pos_lnum in
   let c = pos.pos_cnum - pos.pos_bol + 1 in
   eprintf "File \"%s\", line %d, characters %d-%d:\n" !input_file l (c-1) c
+;;
+
+let print_separation () =
+  print_newline ();
+  print_newline ();
+  print_string "####################################";
+  print_newline ();
+  print_string "####################################";
+  print_newline ();
+  print_newline ()
 ;;
 
 let () =
@@ -64,21 +75,35 @@ let () =
 
   if (Filename.check_suffix !input_file ".lus") then begin
     try
+      (* PARSING *)
       let p_lustre = Parser.file Lexer.token buf in
-      let p = Ast_lustre_to_ast.convert p_lustre in
       close_in f;
 
-      if !parse_only then begin
+      if !verbose then begin
+        print_string "    (SYNTATIC ANALYSIS)\n";
         Lustre_printer.print_lustre p_lustre;
-        print_newline ();
-        print_newline ();
-        print_newline ();
-        Lustre_printer.print p;
-        exit 0;
+        print_separation ()
       end;
 
-      Lustre_printer.print p;
-      Synchronous_check.check_clock_file p;
+      if !parse_only then begin
+        exit 0
+      end;
+
+      (* TYPING *)
+      let p = Type.type_file p_lustre in
+
+      if !verbose then begin
+        print_string "    (TYPING)\n";
+        Lustre_printer.print p;
+        print_separation ()
+      end;
+
+      if !type_only then begin
+        exit 0
+      end;
+
+      (* CLOCKING *)
+      Clocking.check_clock_file p;
 
       if !clock_only then begin
         exit 0;
@@ -95,11 +120,15 @@ let () =
         localisation (Lexing.lexeme_start_p buf);
     	  eprintf "Syntax error@.";
         exit 1
-    |Synchronous_check.Bad_Clock(loc, str) ->
-      localisation (fst loc);
-      eprintf "Clock error@.";
-      Printf.printf "%s\n" str;
-      exit 1
+      |Type.Type_Error(str) ->
+        eprintf "Type error@.";
+        Printf.printf "%s\n" str;
+        exit 1
+      |Clocking.Bad_Clock(loc, str) ->
+        localisation (fst loc);
+        eprintf "Clock error@.";
+        Printf.printf "%s\n" str;
+        exit 1
   end else begin
     try
       let p_elustre = Eparser.file Elexer.token buf in

@@ -27,11 +27,12 @@ let print_separated_list print_fn sep l =
 
 let print_id = print_string;;
 
-let print_type t =
+let rec print_type t =
   match t with
   |Tint -> print_string "int"
   |Treal -> print_string "real"
   |Ttype(id) -> print_id id
+  |Ttuple(ty_l) -> print_string "("; print_separated_list print_type ", " ty_l; print_string ")"
 ;;
 
 let print_const c =
@@ -43,6 +44,7 @@ let print_const c =
 let rec print_ck_const ck_const =
   match ck_const with
   |CK_base -> ()
+  |CK_free -> print_string " (FREE!!!) "
   |CK_on(ck_const', enum_id, id) ->
     print_string " when ";
     print_id enum_id;
@@ -55,6 +57,12 @@ let rec print_ck_const ck_const =
     print_string ")"
 ;;
 
+let string_of_uop o =
+  match o with
+  |UOp_not -> "not"
+  |UOp_minus -> "-"
+;;
+
 let string_of_op o =
   match o with
   |Op_eq -> "="
@@ -63,12 +71,11 @@ let string_of_op o =
   |Op_le -> "<="
   |Op_gt -> ">"
   |Op_ge -> ">="
-  |Op_add |Op_add_f -> "+"
-  |Op_sub |Op_sub_f -> "-"
-  |Op_mul |Op_mul_f -> "*"
-  |Op_div |Op_div_f -> "/"
+  |Op_add -> "+"
+  |Op_sub -> "-"
+  |Op_mul -> "*"
+  |Op_div -> "/"
   |Op_mod -> "mod"
-  |Op_not -> "not"
   |Op_and -> "and"
   |Op_or -> "or"
   |Op_impl -> "=>"
@@ -78,9 +85,19 @@ let rec print_expr_lustre e =
   match e.pexpr_lustre_desc with
   |PEL_const(c) -> print_const c
   |PEL_ident(id) -> print_id id
-  |PEL_op(op, exp_l) ->
+  |PEL_op(op, e1) ->
     print_string "(";
-    print_separated_list print_expr_lustre (" " ^ (string_of_op op) ^ " ") exp_l;
+    print_string (string_of_uop op);
+    print_string " ";
+    print_expr_lustre e1;
+    print_string ")"
+  |PEL_binop(op, e1, e2) ->
+    print_string "(";
+    print_expr_lustre e1;
+    print_string " ";
+    print_string (string_of_op op);
+    print_string " ";
+    print_expr_lustre e2;
     print_string ")"
   |PEL_if(e, e', e'') ->
     print_string "if ";
@@ -140,9 +157,7 @@ let print_var_decl v =
   print_id v.param_id;
   print_string ": ";
   print_type v.param_ty;
-  (match v.param_ck with
-   |None -> ()
-   |Some(ck_const) -> print_ck_const ck_const)
+  print_ck_const v.param_ck
 ;;
 
 let print_node_lustre n =
@@ -156,7 +171,7 @@ let print_node_lustre n =
   print_string "returns (";
   print_separated_list print_var_decl ", " n.pn_lustre_output;
   print_string ");\n";
-  print_string "var ";
+  if List.length n.pn_lustre_local > 0 then print_string "var ";
   open_hovbox 2;
     print_separated_list print_var_decl ";\n" n.pn_lustre_local;
     print_string ";\n";
@@ -192,9 +207,19 @@ let rec print_expr e =
   match e.pexpr_desc with
   |PE_const(c) -> print_const c
   |PE_ident(id) -> print_id id
-  |PE_op(op, exp_l) ->
+  |PE_op(op, e1) ->
     print_string "(";
-    print_separated_list print_expr (" " ^ (string_of_op op) ^ " ") exp_l;
+    print_string (string_of_uop op);
+    print_string " ";
+    print_expr e1;
+    print_string ")"
+  |PE_binop(op, e1, e2) ->
+    print_string "(";
+    print_expr e1;
+    print_string " ";
+    print_string (string_of_op op);
+    print_string " ";
+    print_expr e2;
     print_string ")"
   |PE_app(id, exp_l) ->
     print_id id;
@@ -254,7 +279,7 @@ let print_node n =
   print_string "returns (";
   print_separated_list print_var_decl ", " n.pn_output;
   print_string ");\n";
-  print_string "var ";
+  if List.length n.pn_local > 0 then print_string "var ";
   open_hovbox 2;
     print_separated_list print_var_decl ";\n" n.pn_local;
     print_string ";\n";

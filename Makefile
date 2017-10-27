@@ -1,5 +1,5 @@
-LUS_I=ast.cmo ast_lustre.cmo lustre_printer.cmo type.cmo synchronous_check.cmo parser.cmi parser.cmo lexer.cmo main.cmo
-LUS=ast.cmo ast_lustre.cmo lustre_printer.cmo type.cmo synchronous_check.cmo parser.cmo lexer.cmo main.cmo
+LUS_I=ast.cmo ast_lustre.cmo lustre_printer.cmo type.cmo clocking.cmo parser.cmi parser.cmo lexer.cmo
+LUS=ast.cmo ast_lustre.cmo lustre_printer.cmo type.cmo clocking.cmo parser.cmo lexer.cmo
 ELUS_I=east.cmo elustre_printer.cmo eparser.cmi eparser.cmo elexer.cmo
 ELUS=east.cmo elustre_printer.cmo eparser.cmo elexer.cmo
 COMMON_I=main.cmo

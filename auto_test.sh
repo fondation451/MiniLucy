@@ -17,10 +17,10 @@ echo
 
 compile () {
 if [[ $verbose != 0 ]]; then
-  echo Compiling $2 $3
-  ./$compiler $2 $3;
+  echo Compiling $1 $2
+  ./$compiler $1 $2;
 else
-  ./$compiler $2 $3 > /dev/null 2>&1;
+  ./$compiler $1 $2 > /dev/null 2>&1;
 fi;
 }
 
@@ -55,13 +55,15 @@ for f in tests/syntax/good/*.$ext; do
     echo -n ".";
     max=`expr $max + 1`;
     compile --parse-only $f;
-    case $? in
+    out=$?;
+    case $out in
 	"1")
 	echo
 	echo "FAIL on "$f" (should have been accepted)";;
 	"0") score=`expr $score + 1`;;
 	*)
 	echo
+  echo $out
   echo "COMPILER FAIL on "$f"";;
     esac
 done
@@ -69,7 +71,9 @@ echo
 
 percent=`expr 100 \* $score / $max`;
 
-echo -n "Part 1 ($ext): $score/$max : $percent%"; }
+echo -n "Part 1 ($ext): $score/$max : $percent%"
+echo
+echo;}
 
 part2 () {
 
@@ -77,13 +81,13 @@ score=0
 max=0
 ext=$1
 
-echo "Part 2: clock analysis"
+echo "Part 2: Typing"
 
 echo -n "Bad cases "
 for f in tests/syntax/bad/*.$ext; do
     echo -n ".";
     max=`expr $max + 1`;
-    compile --clock $f;
+    compile --type-only $f;
     case $? in
 	"0")
 	echo
@@ -101,7 +105,7 @@ echo -n "Good cases "
 for f in tests/syntax/good/*.$ext; do
     echo -n ".";
     max=`expr $max + 1`;
-    compile --clock $f;
+    compile --type-only $f;
     case $? in
 	"1")
 	echo
@@ -116,7 +120,60 @@ echo
 
 percent=`expr 100 \* $score / $max`;
 
-echo -n "Part 2: $score/$max : $percent%"; }
+echo -n "Part 2: $score/$max : $percent%"
+echo
+echo; }
+
+part3 () {
+
+score=0
+max=0
+ext=$1
+
+echo "Part 3: clock analysis"
+
+echo -n "Bad cases "
+for f in tests/syntax/bad/*.$ext; do
+    echo -n ".";
+    max=`expr $max + 1`;
+    compile --clock-only $f;
+    case $? in
+	"0")
+	echo
+	echo "FAIL on "$f" (should have been rejected)";;
+	"1") score=`expr $score + 1`;;
+	*)
+	echo
+	echo "COMPILER FAIL on "$f"";
+    esac
+done
+echo
+
+# les bons
+echo -n "Good cases "
+for f in tests/syntax/good/*.$ext; do
+    echo -n ".";
+    max=`expr $max + 1`;
+    compile --clock-only $f;
+    case $? in
+	"1")
+	echo
+	echo "FAIL on "$f" (should have been accepted)";;
+	"0") score=`expr $score + 1`;;
+	*)
+	echo
+  echo "COMPILER FAIL on "$f"";;
+    esac
+done
+echo
+
+percent=`expr 100 \* $score / $max`;
+
+echo -n "Part 3: $score/$max : $percent%"
+echo
+echo; }
+
+
 
 
 
@@ -126,6 +183,7 @@ test () {
   ext=$1
   part1 $ext;
   part2 $ext;
+  part3 $ext;
 }
 
 

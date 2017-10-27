@@ -16,13 +16,14 @@ open Ast;;
 
 type p_expr_lustre = {
   pexpr_lustre_desc : p_expr_lustre_desc;
-  pexpr_lustre_clk : clock_t option;
+  pexpr_lustre_clk : clock_t;
   pexpr_lustre_loc : location;
 }
 and p_expr_lustre_desc =
   |PEL_const of const
   |PEL_ident of ident
-  |PEL_op of op * p_expr_lustre list
+  |PEL_op of uop * p_expr_lustre
+  |PEL_binop of op * p_expr_lustre * p_expr_lustre
   |PEL_if of p_expr_lustre * p_expr_lustre * p_expr_lustre
   |PEL_app of ident * p_expr_lustre list
   |PEL_arrow of p_expr_lustre * p_expr_lustre
@@ -47,4 +48,4 @@ type p_node_lustre = {
   pn_lustre_loc: location;
 };;
 
-type p_file_lustre = enum_ty TypeMap.t * p_const list * p_node_lustre list;;
+type p_file_lustre = enum_ty IdentMap.t * p_const list * p_node_lustre list;;
