@@ -48,11 +48,11 @@ let
                 -- V23 is necessarily True,  hence T1 is wrong
                 Average(T2, T3) ;
 
-  Heat_on = True ->
+  Heat_on = True fby
     if Tguess = FAILURE then False else
     if Tguess < TMIN    then True  else
     if Tguess > TMAX    then False else
-                        pre Heat_on;
+                        Heat_on;
 tel
 
 
@@ -61,13 +61,13 @@ tel
 node not_a_sauna(T,  T1, T2, T3 : real; Heat_on: bool) returns (ok:bool);
 
 let
-  ok = True -> pre T < TMAX + 1.0 ;
+  ok = True fby T < TMAX + 1.0 ;
 tel
 
 node not_a_sauna2(T,  T1, T2, T3 : real; Heat_on: bool) returns (ok:bool);
 
 let
-  ok = True -> pre T < TMAX - 6.0 ;
+  ok = True fby T < TMAX - 6.0 ;
 tel
 
 
