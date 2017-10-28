@@ -20,6 +20,7 @@ open Format;;
 let parse_only = ref false;;
 let type_only = ref false;;
 let clock_only = ref false;;
+let normalize_only = ref false;;
 
 let verbose = ref false;;
 
@@ -34,6 +35,7 @@ let options = [
   "--parse-only", Arg.Set parse_only, "  Execute only syntactic analysis";
   "--type-only", Arg.Set type_only, "  Execute only typing";
   "--clock-only", Arg.Set clock_only, "  Execute only clock verification";
+  "--normalize-only", Arg.Set normalize_only, "  Execute only normalization";
   "-v", Arg.Set verbose, "  Verbose mode"
 ];;
 
@@ -103,9 +105,28 @@ let () =
       end;
 
       (* CLOCKING *)
-      Clocking.check_clock_file p;
+      let pc = Clocking.check_clock_file p in
+
+      if !verbose then begin
+        print_string "    (CLOCKING)\n";
+        Lustre_printer.print p;
+        print_separation ()
+      end;
 
       if !clock_only then begin
+        exit 0;
+      end;
+
+      (* NORMALIZATION *)
+      let pn = Normalize.normalize_file pc in
+
+      if !verbose then begin
+        print_string "    (NORMALIZATION)\n";
+        Lustre_printer.print pn;
+        print_separation ()
+      end;
+
+      if !normalize_only then begin
         exit 0;
       end;
 

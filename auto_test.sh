@@ -174,6 +174,58 @@ echo
 echo; }
 
 
+part4 () {
+
+score=0
+max=0
+ext=$1
+
+echo "Part 4: Normalization"
+
+echo -n "Bad cases "
+for f in tests/syntax/bad/*.$ext; do
+    echo -n ".";
+    max=`expr $max + 1`;
+    compile --normalize-only $f;
+    case $? in
+	"0")
+	echo
+	echo "FAIL on "$f" (should have been rejected)";;
+	"1") score=`expr $score + 1`;;
+	*)
+	echo
+	echo "COMPILER FAIL on "$f"";
+    esac
+done
+echo
+
+# les bons
+echo -n "Good cases "
+for f in tests/syntax/good/*.$ext; do
+    echo -n ".";
+    max=`expr $max + 1`;
+    compile --normalize-only $f;
+    case $? in
+	"1")
+	echo
+	echo "FAIL on "$f" (should have been accepted)";;
+	"0") score=`expr $score + 1`;;
+	*)
+	echo
+  echo "COMPILER FAIL on "$f"";;
+    esac
+done
+echo
+
+percent=`expr 100 \* $score / $max`;
+
+echo -n "Part 4: $score/$max : $percent%"
+echo
+echo; }
+
+
+
+
 
 
 
@@ -184,6 +236,7 @@ test () {
   part1 $ext;
   part2 $ext;
   part3 $ext;
+  part4 $ext;
 }
 
 
