@@ -4,3 +4,6 @@
 *.automaton
 *.conflicts
 minilucy
+
+# Vim files
+*.swp
