@@ -207,11 +207,10 @@ expr:
 |expr AND expr {mk_expr (PEL_binop (Op_and, $1, $3))}
 |expr OR expr {mk_expr (PEL_binop (Op_or, $1, $3))}
 |expr IMPL expr {mk_expr (PEL_binop (Op_impl, $1, $3))}
-|expr ARROW expr {mk_expr (PEL_arrow ($1, $3))}
-|expr FBY expr {mk_expr (PEL_arrow ($1, mk_expr (PEL_pre ($3))))}
+|expr ARROW expr {mk_expr (PEL_if (mk_expr (PEL_fby(mk_expr (PEL_ident("True")), mk_expr (PEL_ident("False")))), $1, $3))}
+|expr FBY expr {mk_expr (PEL_fby ($1, $3))}
 |MINUS expr /* %prec uminus */ {mk_expr (PEL_op (UOp_minus, $2))}
 |NOT expr {mk_expr (PEL_op (UOp_not, $2))}
-|PRE expr {mk_expr (PEL_pre ($2))}
 |LPAREN expr COMMA expr_comma_list RPAREN {mk_expr (PEL_tuple ($2::$4))}
 |e1 = expr; WHEN; id = IDENT; LPAREN; e2 = expr; RPAREN {mk_expr (PEL_when (e1, id, e2))}
 |CURRENT expr {mk_expr (PEL_current ($2))}

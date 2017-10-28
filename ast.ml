@@ -18,6 +18,10 @@ type ident = string;;
 
 let ident_from_string str = str;;
 
+let gen_new_id =
+  let cpt = ref 0 in fun () -> incr cpt; "__aux"^(string_of_int !cpt)
+;;
+
 exception Variable_Not_Found of ident;;
 
 module IdentMap = Map.Make(struct
@@ -43,6 +47,7 @@ type ty = lustre_ty list;;
 type const =
   |Cint of int
   |Creal of float
+  |Cenum of ident
 ;;
 
 type clock_t =
@@ -75,8 +80,7 @@ and p_expr_desc =
   |PE_op of uop * p_expr
   |PE_binop of op * p_expr * p_expr
   |PE_app of ident * p_expr list
-  |PE_arrow of p_expr * p_expr
-  |PE_pre of p_expr
+  |PE_fby of p_expr * p_expr
   |PE_tuple of p_expr list
   |PE_when of p_expr * ident * ident
   |PE_current of p_expr

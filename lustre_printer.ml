@@ -39,6 +39,7 @@ let print_const c =
   match c with
   |Cint(i) -> print_int i
   |Creal(f) -> print_float f
+  |Cenum(id) -> print_id id
 ;;
 
 let rec print_ck_const ck_const =
@@ -111,14 +112,10 @@ let rec print_expr_lustre e =
     print_string "(";
     print_separated_list print_expr_lustre ", " exp_l;
     print_string ")"
-  |PEL_arrow(e, e') ->
+  |PEL_fby(e, e') ->
     print_expr_lustre e;
-    print_string " -> ";
+    print_string " fby ";
     print_expr_lustre e'
-  |PEL_pre(e) ->
-    print_string "pre (";
-    print_expr_lustre e;
-    print_string ")"
   |PEL_tuple(exp_l) ->
     print_string "(";
     print_separated_list print_expr_lustre ", " exp_l;
@@ -226,14 +223,10 @@ let rec print_expr e =
     print_string "(";
     print_separated_list print_expr ", " exp_l;
     print_string ")"
-  |PE_arrow(e, e') ->
+  |PE_fby(e, e') ->
     print_expr e;
-    print_string " -> ";
+    print_string " fby ";
     print_expr e'
-  |PE_pre(e) ->
-    print_string "pre (";
-    print_expr e;
-    print_string ")"
   |PE_tuple(exp_l) ->
     print_string "(";
     print_separated_list print_expr ", " exp_l;
@@ -265,7 +258,10 @@ let print_equation e =
      |PP_ident(id) -> print_id id
      |PP_tuple(id_l) -> print_separated_list print_id ", " id_l);
   print_string " = ";
-  print_expr e.peq_expr
+  print_expr e.peq_expr;
+  print_string "    [";
+  print_ck_const e.peq_expr.pexpr_clk;
+  print_string "]"
 ;;
 
 let print_node n =

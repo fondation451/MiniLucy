@@ -39,7 +39,6 @@ Clément PASCUTTO <clement.pascutto@ens.fr>
       "node", NODE;
       "not", NOT;
       "or", OR;
-      "pre", PRE;
       "real", REAL;
       "returns", RETURNS;
       "tel", TEL;

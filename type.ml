@@ -19,9 +19,9 @@ exception Type_Error of string;;
 
 Random.self_init ();;
 
-let gen_new_id () =
+(*let gen_new_id () =
   "__" ^ (string_of_int (Random.bits ())) ^ "id" ^ (string_of_int (Random.bits ())) ^ "__"
-;;
+;;*)
 
 let rec string_ty ty =
   match ty with
@@ -48,6 +48,7 @@ let type_const c =
   match c with
   |Cint(i) -> Tint
   |Creal(f) -> Treal
+  |_ -> assert false
 ;;
 
 let type_id ty_map env id = try
@@ -86,7 +87,15 @@ let rec type_expr ty_map env e vars eqs =
   let (type_env, var_env, node_env) = env in
   match e.pexpr_lustre_desc with
   |PEL_const c -> (mk_expr_from e (PE_const c) (type_const c), vars, eqs)
-  |PEL_ident id -> (mk_expr_from e (PE_ident id) (type_id ty_map var_env id), vars, eqs)
+  |PEL_ident id -> begin
+    try
+      let enum_ty = IdentMap.find id ty_map in
+      (mk_expr_from e (PE_const(Cenum(id))) enum_ty, vars, eqs)
+    with Not_found -> try
+      let id_ty = IdentMap.find id var_env in
+      (mk_expr_from e (PE_ident id) id_ty, vars, eqs)
+    with Not_found -> raise (Type_Error ("Variable " ^ id ^ " not found"))
+  end
   |PEL_op(uop, e') -> begin
     let e'_t, vars', eqs' = type_expr ty_map env e' vars eqs in
     match uop with
@@ -170,16 +179,13 @@ let rec type_expr ty_map env e vars eqs =
     |Invalid_argument(_) -> raise (Type_Error ("Node " ^ id ^ " : invalid number of arguments"))
     |Type_Error(str) -> raise (Type_Error(str))
   end
-  |PEL_arrow (e1, e2) ->
+  |PEL_fby (e1, e2) ->
     let e1_t, vars, eqs = type_expr ty_map env e1 vars eqs in
     let e2_t, vars, eqs = type_expr ty_map env e2 vars eqs in
     if e1_t.pexpr_ty = e2_t.pexpr_ty then
-      (mk_expr_from e (PE_arrow (e1_t, e2_t)) e1_t.pexpr_ty, vars, eqs)
+      (mk_expr_from e (PE_fby (e1_t, e2_t)) e1_t.pexpr_ty, vars, eqs)
     else
-      raise (Type_Error "Arrow : not the same type in both side")
-  |PEL_pre e' ->
-    let e'_t, vars, eqs = type_expr ty_map env e' vars eqs in
-    (mk_expr_from e (PE_pre e'_t) e'_t.pexpr_ty, vars, eqs)
+      raise (Type_Error "FBY : not the same type in both side")
   |PEL_tuple e_l ->
     let e_l_t, vars, eqs = type_expr_l ty_map env e_l vars eqs in
     let ty = Ttuple (List.map (fun e -> e.pexpr_ty) e_l_t) in
@@ -188,7 +194,7 @@ let rec type_expr ty_map env e vars eqs =
     let e1_t, vars, eqs = type_expr ty_map env e1 vars eqs in
     let e2_t, vars, eqs = type_expr ty_map env e2 vars eqs in
     try
-      let ty_enum_id = Ttype(IdentMap.find enum_id ty_map) in
+      let ty_enum_id = IdentMap.find enum_id ty_map in
       if ty_enum_id = e2_t.pexpr_ty then
         let id, vars, eqs =
           match e2_t.pexpr_desc with
@@ -253,7 +259,8 @@ let type_eq ty_map env eq vars eqs =
 ;;
 
 let type_eqs ty_map env eq_l =
-  List.fold_left (fun (vars, eqs) eq -> type_eq ty_map env eq vars eqs) ([], []) eq_l
+  let vars, eqs = (List.fold_left (fun (vars, eqs) eq -> type_eq ty_map env eq vars eqs) ([], []) eq_l) in
+  vars, List.rev eqs
 ;;
 
 let type_node ty_map env node =
@@ -276,7 +283,7 @@ let type_node ty_map env node =
 let mk_ty_map f =
   let f_ty, f_const, f_node_l = f in
   let full_ty = IdentMap.bindings f_ty in
-  List.fold_left (fun out (ty, l_enum) -> List.fold_left (fun out enum -> IdentMap.add enum ty out) out l_enum) IdentMap.empty full_ty
+  List.fold_left (fun out (ty, l_enum) -> List.fold_left (fun out enum -> IdentMap.add enum (Ttype(ty)) out) out l_enum) IdentMap.empty full_ty
 ;;
 
 let mk_env f =
