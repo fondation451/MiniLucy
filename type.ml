@@ -83,12 +83,15 @@ let type_param ty_map env p =
 ;;
 
 
-let rec type_expr ty_map env e vars eqs =
+let rec type_expr const_map ty_map env e vars eqs =
   let (type_env, var_env, node_env) = env in
   match e.pexpr_lustre_desc with
   |PEL_const c -> (mk_expr_from e (PE_const c) (type_const c), vars, eqs)
   |PEL_ident id -> begin
     try
+      let const_v = List.assoc id const_map in
+      (mk_expr_from e (PE_const(const_v)) (type_const const_v), vars, eqs)
+    with Not_found -> try
       let enum_ty = IdentMap.find id ty_map in
       (mk_expr_from e (PE_const(Cenum(id))) enum_ty, vars, eqs)
     with Not_found -> try
@@ -97,7 +100,7 @@ let rec type_expr ty_map env e vars eqs =
     with Not_found -> raise (Type_Error ("Variable " ^ id ^ " not found"))
   end
   |PEL_op(uop, e') -> begin
-    let e'_t, vars', eqs' = type_expr ty_map env e' vars eqs in
+    let e'_t, vars', eqs' = type_expr const_map ty_map env e' vars eqs in
     match uop with
     |UOp_not ->
       if e'_t.pexpr_ty = lustre_bool_type then
@@ -111,8 +114,8 @@ let rec type_expr ty_map env e vars eqs =
     end
   end
   |PEL_binop (op, e1, e2) -> begin
-    let e1_t, vars', eqs' = type_expr ty_map env e1 vars eqs in
-    let e2_t, vars'', eqs'' = type_expr ty_map env e2 vars' eqs' in
+    let e1_t, vars', eqs' = type_expr const_map ty_map env e1 vars eqs in
+    let e2_t, vars'', eqs'' = type_expr const_map ty_map env e2 vars' eqs' in
     match op with
     |Op_add |Op_sub |Op_mul |Op_div |Op_mod -> begin
       match e1_t.pexpr_ty, e2_t.pexpr_ty with
@@ -133,12 +136,12 @@ let rec type_expr ty_map env e vars eqs =
         raise (Type_Error "Operation : logicals should be performed on booleans")
   end
   |PEL_if(e1, e2, e3) -> begin
-    let e1_t, vars, eqs = type_expr ty_map env e1 vars eqs in
-    let e2_t, vars, eqs = type_expr ty_map env e2 vars eqs in
-    let e3_t, vars, eqs = type_expr ty_map env e3 vars eqs in
-    print_endline (string_ty e1_t.pexpr_ty);
+    let e1_t, vars, eqs = type_expr const_map ty_map env e1 vars eqs in
+    let e2_t, vars, eqs = type_expr const_map ty_map env e2 vars eqs in
+    let e3_t, vars, eqs = type_expr const_map ty_map env e3 vars eqs in
+(*    print_endline (string_ty e1_t.pexpr_ty);
     print_endline (string_ty e2_t.pexpr_ty);
-    print_endline (string_ty e3_t.pexpr_ty);
+    print_endline (string_ty e3_t.pexpr_ty);*)
     if e1_t.pexpr_ty = lustre_bool_type && e2_t.pexpr_ty = e3_t.pexpr_ty then
       let id, vars, eqs =
         match e1_t.pexpr_desc with
@@ -162,7 +165,7 @@ let rec type_expr ty_map env e vars eqs =
       raise (Type_Error "If : invalid types")
   end
   |PEL_app (id, e_l) -> begin
-    let e_l_t, vars, eqs = type_expr_l ty_map env e_l vars eqs in
+    let e_l_t, vars, eqs = type_expr_l const_map ty_map env e_l vars eqs in
     try
       let f_node = IdentMap.find id node_env in
       let ty =
@@ -179,20 +182,24 @@ let rec type_expr ty_map env e vars eqs =
     |Invalid_argument(_) -> raise (Type_Error ("Node " ^ id ^ " : invalid number of arguments"))
     |Type_Error(str) -> raise (Type_Error(str))
   end
-  |PEL_fby (e1, e2) ->
-    let e1_t, vars, eqs = type_expr ty_map env e1 vars eqs in
-    let e2_t, vars, eqs = type_expr ty_map env e2 vars eqs in
-    if e1_t.pexpr_ty = e2_t.pexpr_ty then
-      (mk_expr_from e (PE_fby (e1_t, e2_t)) e1_t.pexpr_ty, vars, eqs)
-    else
-      raise (Type_Error "FBY : not the same type in both side")
+  |PEL_fby (c, e2) -> begin
+    try
+      let c_ty = match c with |Cenum(id) -> IdentMap.find id ty_map |Cint(_) -> Tint |Creal(_) -> Treal in
+      let e2_t, vars, eqs = type_expr const_map ty_map env e2 vars eqs in
+      if c_ty = e2_t.pexpr_ty then
+        (mk_expr_from e (PE_fby (c, e2_t)) e2_t.pexpr_ty, vars, eqs)
+      else
+        raise (Type_Error "FBY : not the same type in both side")
+    with
+      Not_found -> raise (Type_Error "FBY : constant is not a defined")
+  end
   |PEL_tuple e_l ->
-    let e_l_t, vars, eqs = type_expr_l ty_map env e_l vars eqs in
+    let e_l_t, vars, eqs = type_expr_l const_map ty_map env e_l vars eqs in
     let ty = Ttuple (List.map (fun e -> e.pexpr_ty) e_l_t) in
     (mk_expr_from e (PE_tuple e_l_t) ty, vars, eqs)
   |PEL_when (e1, enum_id, e2) -> begin
-    let e1_t, vars, eqs = type_expr ty_map env e1 vars eqs in
-    let e2_t, vars, eqs = type_expr ty_map env e2 vars eqs in
+    let e1_t, vars, eqs = type_expr const_map ty_map env e1 vars eqs in
+    let e2_t, vars, eqs = type_expr const_map ty_map env e2 vars eqs in
     try
       let ty_enum_id = IdentMap.find enum_id ty_map in
       if ty_enum_id = e2_t.pexpr_ty then
@@ -214,13 +221,13 @@ let rec type_expr ty_map env e vars eqs =
     |Type_Error(str) -> raise (Type_Error str)
   end
   |PEL_current e' ->
-    let e'_t, vars, eqs = type_expr ty_map env e' vars eqs in
+    let e'_t, vars, eqs = type_expr const_map ty_map env e' vars eqs in
     (mk_expr_from e (PE_current e'_t) e'_t.pexpr_ty, vars, eqs)
   |PEL_merge (id, merge_l) -> begin
     let enum_l, e_l = List.split merge_l in
     let e_l', vars, eqs = List.fold_right
       (fun e' (e_l', vars, eqs) ->
-        let e'', vars, eqs = type_expr ty_map env e' vars eqs in
+        let e'', vars, eqs = type_expr const_map ty_map env e' vars eqs in
         e''::e_l', vars, eqs) e_l ([], vars, eqs) in
     let merge_l' = List.combine enum_l e_l' in
     try begin
@@ -241,34 +248,34 @@ let rec type_expr ty_map env e vars eqs =
     |Not_found -> raise (Type_Error ("Merge : the variable " ^ id ^ " does not exist"))
     |Type_Error(str) -> raise (Type_Error(str))
   end
-and type_expr_l ty_map env e_l vars eqs =
+and type_expr_l const_map ty_map env e_l vars eqs =
   (List.fold_right
     (fun e' (out, vars, eqs) ->
-      let e'_t, vars, eqs = type_expr ty_map env e' vars eqs in
+      let e'_t, vars, eqs = type_expr const_map ty_map env e' vars eqs in
       (e'_t::out, vars, eqs))
     e_l ([], vars, eqs))
 ;;
 
-let type_eq ty_map env eq vars eqs =
+let type_eq const_map ty_map env eq vars eqs =
   let ty_p = type_param ty_map env eq.peq_lustre_patt in
-  let e_t, vars, eqs = type_expr ty_map env eq.peq_lustre_expr vars eqs in
+  let e_t, vars, eqs = type_expr const_map ty_map env eq.peq_lustre_expr vars eqs in
   if e_t.pexpr_ty = ty_p then
     (vars, {peq_patt = eq.peq_lustre_patt; peq_expr = e_t}::eqs)
   else
     raise (Type_Error ("Equation : " ^ (string_patt eq.peq_lustre_patt) ^ " of type " ^ (string_ty ty_p) ^" doesn't match with the infered type " ^ (string_ty e_t.pexpr_ty)))
 ;;
 
-let type_eqs ty_map env eq_l =
-  let vars, eqs = (List.fold_left (fun (vars, eqs) eq -> type_eq ty_map env eq vars eqs) ([], []) eq_l) in
+let type_eqs const_map ty_map env eq_l =
+  let vars, eqs = (List.fold_left (fun (vars, eqs) eq -> type_eq const_map ty_map env eq vars eqs) ([], []) eq_l) in
   vars, List.rev eqs
 ;;
 
-let type_node ty_map env node =
+let type_node const_map ty_map env node =
   let (type_env, var_env, node_env) = env in
   let var_env = List.fold_left (fun map p -> IdentMap.add p.param_id p.param_ty map) var_env node.pn_lustre_input in
   let var_env = List.fold_left (fun map p -> IdentMap.add p.param_id p.param_ty map) var_env node.pn_lustre_output in
   let var_env = List.fold_left (fun map p -> IdentMap.add p.param_id p.param_ty map) var_env node.pn_lustre_local in
-  let vars, eqs = type_eqs ty_map (type_env, var_env, node_env) node.pn_lustre_equs in
+  let vars, eqs = type_eqs const_map ty_map (type_env, var_env, node_env) node.pn_lustre_equs in
   let new_local = List.fold_left (fun l (id, ty) -> {param_id = id; param_ty = ty; param_ck = CK_free;}::l) node.pn_lustre_local vars in
   {
     pn_name = node.pn_lustre_name;
@@ -298,5 +305,5 @@ let type_file f =
   let f_ty, f_const, f_node_l = f in
   let ty_map = mk_ty_map f in
   let env = mk_env f in
-  (f_ty, f_const, List.map (type_node ty_map env) f_node_l)
+  (f_ty, List.map (type_node f_const ty_map env) f_node_l)
 ;;

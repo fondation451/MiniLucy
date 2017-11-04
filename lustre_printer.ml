@@ -112,8 +112,8 @@ let rec print_expr_lustre e =
     print_string "(";
     print_separated_list print_expr_lustre ", " exp_l;
     print_string ")"
-  |PEL_fby(e, e') ->
-    print_expr_lustre e;
+  |PEL_fby(c, e') ->
+    print_const c;
     print_string " fby ";
     print_expr_lustre e'
   |PEL_tuple(exp_l) ->
@@ -223,8 +223,8 @@ let rec print_expr e =
     print_string "(";
     print_separated_list print_expr ", " exp_l;
     print_string ")"
-  |PE_fby(e, e') ->
-    print_expr e;
+  |PE_fby(c, e') ->
+    print_const c;
     print_string " fby ";
     print_expr e'
   |PE_tuple(exp_l) ->
@@ -290,10 +290,8 @@ let print_node n =
 ;;
 
 let print f =
-  let type_decs, const_decs, node_decs = f in
+  let type_decs, node_decs = f in
   open_hovbox 0;
-    print_separated_list print_const_dec ";\n" const_decs;
-    print_newline ();
     print_separated_list print_node "\n\n" node_decs;
     print_newline ();
   close_box ()

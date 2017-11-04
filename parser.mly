@@ -207,8 +207,8 @@ expr:
 |expr AND expr {mk_expr (PEL_binop (Op_and, $1, $3))}
 |expr OR expr {mk_expr (PEL_binop (Op_or, $1, $3))}
 |expr IMPL expr {mk_expr (PEL_binop (Op_impl, $1, $3))}
-|expr ARROW expr {mk_expr (PEL_if (mk_expr (PEL_fby(mk_expr (PEL_ident("True")), mk_expr (PEL_ident("False")))), $1, $3))}
-|expr FBY expr {mk_expr (PEL_fby ($1, $3))}
+|expr ARROW expr {mk_expr (PEL_if (mk_expr (PEL_fby(Cenum("True"), mk_expr (PEL_ident("False")))), $1, $3))}
+|const_fby FBY expr {mk_expr (PEL_fby ($1, $3))}
 |MINUS expr /* %prec uminus */ {mk_expr (PEL_op (UOp_minus, $2))}
 |NOT expr {mk_expr (PEL_op (UOp_not, $2))}
 |LPAREN expr COMMA expr_comma_list RPAREN {mk_expr (PEL_tuple ($2::$4))}
@@ -224,6 +224,12 @@ merge_clause:
 const:
 |CONST_INT {mk_expr (PEL_const (Cint $1))}
 |CONST_REAL {mk_expr (PEL_const (Creal $1))}
+;
+
+const_fby:
+|CONST_INT {Cint $1}
+|CONST_REAL {Creal $1}
+|IDENT {Cenum $1}
 ;
 
 ident_comma_list:

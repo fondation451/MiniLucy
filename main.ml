@@ -21,6 +21,7 @@ let parse_only = ref false;;
 let type_only = ref false;;
 let clock_only = ref false;;
 let normalize_only = ref false;;
+let schedule_only = ref false;;
 
 let verbose = ref false;;
 
@@ -36,6 +37,7 @@ let options = [
   "--type-only", Arg.Set type_only, "  Execute only typing";
   "--clock-only", Arg.Set clock_only, "  Execute only clock verification";
   "--normalize-only", Arg.Set normalize_only, "  Execute only normalization";
+  "--schedule-only", Arg.Set schedule_only, "  Execute only schedule";
   "-v", Arg.Set verbose, "  Verbose mode"
 ];;
 
@@ -109,7 +111,7 @@ let () =
 
       if !verbose then begin
         print_string "    (CLOCKING)\n";
-        Lustre_printer.print p;
+        Lustre_printer.print pc;
         print_separation ()
       end;
 
@@ -127,6 +129,19 @@ let () =
       end;
 
       if !normalize_only then begin
+        exit 0;
+      end;
+
+      (* SCHEDULING *)
+      let ps = Schedule.schedule_file pn in
+
+      if !verbose then begin
+        print_string "    (SCHEDULING)\n";
+        Lustre_printer.print ps;
+        print_separation ()
+      end;
+
+      if !schedule_only then begin
         exit 0;
       end;
 

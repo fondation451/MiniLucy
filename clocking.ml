@@ -89,13 +89,9 @@ let rec check_clock env e =
       ck, {e with pexpr_desc = PE_app(id, e_l'); pexpr_clk = ck}
     else
       raise (Bad_Clock (e.pexpr_loc, "Application : " ^ (List.fold_left (fun out c -> out ^ (string_ck c) ^ ", ") "(" ck_l) ^ ")"))
-  |PE_fby(e1, e2) ->
-    let ck1, e1' = check_clock env e1 in
+  |PE_fby(c, e2) ->
     let ck2, e2' = check_clock env e2 in
-    if equal_ck ck1 CK_base then
-      ck2, {e with pexpr_desc = PE_fby(e1', e2'); pexpr_clk = ck2}
-    else
-      raise (Bad_Clock (e.pexpr_loc, "FBY : " ^ (string_ck ck1)))
+    ck2, {e with pexpr_desc = PE_fby(c, e2'); pexpr_clk = ck2}
   |PE_tuple(e_l) ->
     let rec mk_ck l ck_out = match l with |[] -> CK_tuple (ck_out) |h::t -> mk_ck t (h::ck_out) in
     let ck_l, e_l' = List.split (List.map (check_clock env) e_l) in
@@ -115,8 +111,8 @@ let rec check_clock env e =
   |PE_merge(id, merge_l) ->
     let ck_id = find_param_ck var_env id in
     let ck_l, merge_l' = List.split (List.map (fun (id, e') -> let ck, e'' = check_clock env e' in (ck, (id, e''))) merge_l) in
-    print_endline (string_ck ck_id);
-    List.iter (fun ck -> print_endline (string_ck ck)) ck_l;
+(*    print_endline (string_ck ck_id);
+    List.iter (fun ck -> print_endline (string_ck ck)) ck_l;*)
     if List.for_all (function |CK_on (ck', _, id') -> equal_ck ck' ck_id && id' = id |_ -> false) ck_l then
       ck_id, {e with pexpr_desc = PE_merge(id, merge_l'); pexpr_clk = ck_id}
     else
@@ -131,10 +127,10 @@ let mk_env_const env const = IdentMap.add (fst const) CK_base env;;
 
 let check_eq env eq =
   let node_env, var_env = env in
-  (match eq.peq_patt.ppatt_desc with
+(*  (match eq.peq_patt.ppatt_desc with
   |PP_ident(id) ->
     print_endline ("EQUATION DE " ^ id)
-  |PP_tuple(id_l) -> print_endline ((List.fold_left (fun out id -> out ^ id ^ ", ") "(" id_l) ^ ")"));
+  |PP_tuple(id_l) -> print_endline ((List.fold_left (fun out id -> out ^ id ^ ", ") "(" id_l) ^ ")"));*)
   let ck, e' = check_clock (node_env, var_env) eq.peq_expr in
   let eq' = {eq with peq_expr = e';} in
   match eq.peq_patt.ppatt_desc with
@@ -152,8 +148,8 @@ let check_eq env eq =
   |PP_tuple(id_l) -> begin
     match ck with
     |CK_tuple(ck_l) ->
-      print_list print_string id_l;
-      print_list (fun ck -> print_string (string_ck ck)) ck_l;
+(*      print_list print_string id_l;
+      print_list (fun ck -> print_string (string_ck ck)) ck_l;*)
       let rec check_clock_list id_l ck_l var_env =
         match id_l, ck_l with
         |[], [] -> eq', node_env, var_env
@@ -197,8 +193,7 @@ let check_clock_node env n =
 ;;
 
 let check_clock_file f =
-  let typemap, const_l, node_l = f in
-  let var_env = List.fold_left mk_env_const (IdentMap.empty) const_l in
+  let typemap, node_l = f in
   let node_env = mk_env_node node_l in
-  typemap, const_l, List.map (check_clock_node (node_env, var_env)) node_l
+  typemap, List.map (check_clock_node (node_env, IdentMap.empty)) node_l
 ;;

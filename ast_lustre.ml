@@ -12,6 +12,7 @@ Clément PASCUTTO <clement.pascutto@ens.fr>
 ########
 *)
 
+open Ast_type;;
 open Ast;;
 
 type p_expr_lustre = {
@@ -26,7 +27,7 @@ and p_expr_lustre_desc =
   |PEL_binop of op * p_expr_lustre * p_expr_lustre
   |PEL_if of p_expr_lustre * p_expr_lustre * p_expr_lustre
   |PEL_app of ident * p_expr_lustre list
-  |PEL_fby of p_expr_lustre * p_expr_lustre
+  |PEL_fby of const * p_expr_lustre
   |PEL_tuple of p_expr_lustre list
   |PEL_when of p_expr_lustre * ident * p_expr_lustre
   |PEL_current of p_expr_lustre
@@ -46,5 +47,7 @@ type p_node_lustre = {
   pn_lustre_equs: p_equation_lustre list;
   pn_lustre_loc: location;
 };;
+
+type p_const = ident * const;;
 
 type p_file_lustre = enum_ty IdentMap.t * p_const list * p_node_lustre list;;
