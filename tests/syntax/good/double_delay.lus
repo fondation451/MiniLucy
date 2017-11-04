@@ -1,6 +1,0 @@
-
-node double_delay(x: bool) returns (r,pr: bool);
-let
-  r = x fby x fby x;
-  pr = r fby r;
-tel
