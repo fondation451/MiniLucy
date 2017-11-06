@@ -22,6 +22,7 @@ let type_only = ref false;;
 let clock_only = ref false;;
 let normalize_only = ref false;;
 let schedule_only = ref false;;
+let object_only = ref false;;
 
 let verbose = ref false;;
 
@@ -38,6 +39,7 @@ let options = [
   "--clock-only", Arg.Set clock_only, "  Execute only clock verification";
   "--normalize-only", Arg.Set normalize_only, "  Execute only normalization";
   "--schedule-only", Arg.Set schedule_only, "  Execute only schedule";
+  "--object-only", Arg.Set object_only, "  Execute only transformation to object code";
   "-v", Arg.Set verbose, "  Verbose mode"
 ];;
 
@@ -142,6 +144,19 @@ let () =
       end;
 
       if !schedule_only then begin
+        exit 0;
+      end;
+
+      (* OBJECT *)
+      let po = Object.trans_file ps in
+
+      if !verbose then begin
+        print_string "    (OBJECT)\n";
+        Lustre_printer.print_obj_file po;
+        print_separation ()
+      end;
+
+      if !object_only then begin
         exit 0;
       end;
 

@@ -12,6 +12,7 @@ Clément PASCUTTO <clement.pascutto@ens.fr>
 ########
 *)
 
+open Ast_type;;
 open Ast;;
 
 exception Bad_Clock of location * string;;

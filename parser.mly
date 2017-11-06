@@ -14,6 +14,7 @@ Cl�ment PASCUTTO <clement.pascutto@ens.fr>
 
 %{
 
+  open Ast_type;;
   open Ast;;
   open Ast_lustre;;
   open Parsing;;
@@ -31,7 +32,7 @@ Cl�ment PASCUTTO <clement.pascutto@ens.fr>
 %token CONST
 %token COLON
 %token COMMA
-%token <Ast.op> COMP
+%token <Ast_type.op> COMP
 %token <int> CONST_INT
 %token <float> CONST_REAL
 %token CURRENT

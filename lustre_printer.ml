@@ -13,8 +13,10 @@ Clément PASCUTTO <clement.pascutto@ens.fr
 *)
 
 open Format;;
+open Ast_type;;
 open Ast;;
 open Ast_lustre;;
+open Ast_object;;
 
 let print_separated_list print_fn sep l =
   let rec aux = function
@@ -295,4 +297,62 @@ let print f =
     print_separated_list print_node "\n\n" node_decs;
     print_newline ();
   close_box ()
+;;
+
+let rec print_obj_expr e =
+  match e with
+  |OBJ_const(c) -> print_const c
+  |OBJ_ident(id) -> print_id id
+  |OBJ_state(id) -> print_string "state("; print_id id; print_string ")"
+  |OBJ_op(uop, e1) -> print_string ((string_of_uop uop) ^ "("); print_obj_expr e1; print_string ")"
+  |OBJ_binop(op, e1, e2) -> print_string "("; print_obj_expr e1; print_string (" " ^ (string_of_op op) ^ " "); print_obj_expr e2; print_string ")"
+;;
+
+let rec print_obj_instr i =
+  match i with
+  |IOBJ_var_affect(id, e) -> print_id id; print_string " := "; print_obj_expr e
+  |IOBJ_state_affect(id, e) -> print_string "state("; print_id id; print_string ") := "; print_obj_expr e
+  |IOBJ_skip -> print_string "skip"
+  |IOBJ_reset(id) -> print_id id; print_string ".reset"
+  |IOBJ_step(id_l, id, e_l) ->
+    print_string "(";
+    print_separated_list print_id ", " id_l;
+    print_string ") = ";
+    print_id id;
+    print_string ".step(";
+    print_separated_list print_obj_expr ", " e_l
+  |IOBJ_case(id, case_l) ->
+    print_string "case (";
+    print_id id;
+    print_string ") {";
+    print_separated_list (fun (oid, oi) -> print_id oid; print_string " : "; print_obj_instr oi) "; " case_l;
+    print_string "}"
+  |IOBJ_sequence(i1, i2) -> print_obj_instr i1; print_string ";\n"; print_obj_instr i2
+;;
+
+let print_obj_def o =
+  let f, m, j, reset, step = o in
+  let var1, var2, var3, i = step in
+  let print_var (id, ty) = print_id id; print_string " : "; print_type ty in
+  print_string "machine ";
+  print_id f;
+  print_string " =\nmemory = ";
+  print_separated_list print_var ", " m;
+  print_string "\ninstances = ";
+  print_separated_list (fun (id1, id2) -> print_id id1; print_string " : "; print_id id2) ", " j;
+  print_string "\nreset() = ";
+  print_separated_list print_obj_instr ";\n" reset;
+  print_string "\nstep(";
+  print_separated_list print_var ", " var1;
+  print_string ") returns (";
+  print_separated_list print_var ", " var2;
+  print_string ") = var ";
+  print_separated_list print_var ", " var3;
+  print_string " in \n";
+  print_obj_instr i
+;;
+
+let print_obj_file fo =
+  let ty_map, def_l = fo in
+  print_separated_list print_obj_def "\n\n" def_l
 ;;

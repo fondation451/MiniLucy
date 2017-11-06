@@ -16,6 +16,7 @@ Clément PASCUTTO <clement.pascutto@ens.fr>
 
   open Lexing;;
   open Parser;;
+  open Ast_type;;
   open Ast;;
   open Ast_lustre;;
 

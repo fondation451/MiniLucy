@@ -12,6 +12,7 @@ Clément PASCUTTO <clement.pascutto@ens.fr>
 ########
 *)
 
+open Ast_type;;
 open Ast;;
 
 exception Schedule_Error of string;;
