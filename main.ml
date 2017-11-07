@@ -160,6 +160,10 @@ let () =
         exit 0;
       end;
 
+      let source = To_c.file_to_c po in
+
+      Export_source.export "out.c" source;
+
       exit 0;
     with
       |Lexer.Lexical_error(str) ->

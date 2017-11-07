@@ -67,15 +67,15 @@ let rec trans_expr env e =
   match e.pexpr_desc with
   |PE_const(c) -> OBJ_const(c)
   |PE_ident(id) ->
-    if IdentMap.mem id d then
-      OBJ_ident(id)
-    else if IdentMap.mem id m then
+    if IdentMap.mem id m then
       OBJ_state(id)
+    else if IdentMap.mem id d then
+      OBJ_ident(id)
     else
       raise (Object_Error ("the ident " ^ id ^ " is neither a variable nor a memory"))
   |PE_op(op, e1) -> OBJ_op(op, trans_expr env e1)
   |PE_binop(op, e1, e2) -> OBJ_binop(op, trans_expr env e1, trans_expr env e2)
-  |PE_app(id, e_l) -> assert false
+  |PE_app(id, e_l, id_reset) -> assert false
   |PE_fby(c, e1) -> assert false
   |PE_tuple(e_l) -> assert false
   |PE_when(e1, enum_id, id) -> trans_expr env e1
@@ -101,7 +101,7 @@ and trans_eq env eq =
       new_m, new_si, j, d, new_s
     |PP_tuple(id_l) -> assert false
   end
-  |PE_app(id, e_l) -> begin
+  |PE_app(id, e_l, id_reset) -> begin
     let pattern =
       match pat.ppatt_desc with
       |PP_ident(pid) -> [pid]
@@ -128,7 +128,11 @@ let rec trans_eqs env eqs = List.fold_left trans_eq env eqs;;
 let trans_node node =
   let new_inputs = List.map (fun input -> input.param_id, input.param_ty) node.pn_input in
   let new_outputs = List.map (fun output -> output.param_id, output.param_ty) node.pn_output in
-  let var_map = List.fold_left (fun out v -> IdentMap.add v.param_id v.param_ty out) IdentMap.empty node.pn_local in
+  let var_map =
+    List.fold_left
+      (fun out v -> IdentMap.add v.param_id v.param_ty out)
+      IdentMap.empty
+      (List.rev_append node.pn_input (List.rev_append node.pn_local node.pn_output)) in
   let m, si, j, d, s = trans_eqs (IdentMap.empty, [], IdentMap.empty, var_map, []) node.pn_equs in
   let name = node.pn_name in
   let memory = IdentMap.bindings m in
