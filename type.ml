@@ -165,17 +165,24 @@ let rec type_expr const_map ty_map env e vars eqs =
     else
       raise (Type_Error "If : invalid types")
   end
-  |PEL_app (id, e_l) -> begin
+  |PEL_app (id, e_l, id_reset) -> begin
     let e_l_t, vars, eqs = type_expr_l const_map ty_map env e_l vars eqs in
     try
       let f_node = IdentMap.find id node_env in
+      let id_reset_ty =
+        try
+          IdentMap.find id_reset ty_map
+        with Not_found -> try
+          IdentMap.find id_reset var_env
+        with Not_found -> raise (Type_Error ("Invalid identifier : " ^ id_reset))
+      in
       let ty =
         match (List.map (fun p -> p.param_ty) f_node.pn_lustre_output) with
         |[ty'] -> ty'
         |_ as l -> Ttuple(l)
       in
-      if List.for_all2 (fun e p -> e.pexpr_ty = p.param_ty) e_l_t f_node.pn_lustre_input then
-        mk_expr_from e (PE_app (id, e_l_t)) ty, vars, eqs
+      if lustre_bool_type = id_reset_ty && List.for_all2 (fun e p -> e.pexpr_ty = p.param_ty) e_l_t f_node.pn_lustre_input then
+        mk_expr_from e (PE_app (id, e_l_t, id_reset)) ty, vars, eqs
       else
         raise (Type_Error ("Call of Node " ^ id ^ " : wrong type arguments"))
     with

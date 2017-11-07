@@ -64,7 +64,8 @@ let rec check_clock env e =
       ck1, {e with pexpr_desc = PE_binop(op, e1', e2'); pexpr_clk = ck1}
     else
       raise (Bad_Clock (e.pexpr_loc, "Binary operator : different clocks " ^ (string_ck ck1) ^ " <> " ^ (string_ck ck2)))
-  |PE_app(id, e_l) ->
+  |PE_app(id, e_l, id_reset) ->
+    print_string "PE_APP\n";
 (*    let same_elem l ck_out =
       let rec loop x l ck_out =
         match l with
@@ -74,9 +75,10 @@ let rec check_clock env e =
       match l with |[] -> CK_base, false |h::t -> loop h t []
     in*)
     let same_elem l =
-      let rec loop x l = match l with |[] -> x, true |h::t -> if equal_ck x h then loop x t else CK_base, false in
+      let rec loop x l = match l with |[] -> x, true |h::t -> print_endline (string_ck h); if equal_ck x h then loop x t else CK_base, false in
       match l with |[] -> CK_base, false |h::t -> loop h t
     in
+    let id_reset_ck = try IdentMap.find id_reset var_env with Not_found -> CK_free in
     let ck_l, e_l' = List.split (List.map (check_clock env) e_l) in
     let ck_arg, is_ok = same_elem ck_l in
     let ck =
@@ -86,8 +88,8 @@ let rec check_clock env e =
         |_ as ck_l -> synchronize_over ck_arg (CK_tuple(ck_l))
       with Not_found -> assert false
     in
-    if is_ok then
-      ck, {e with pexpr_desc = PE_app(id, e_l'); pexpr_clk = ck}
+    if equal_ck id_reset_ck ck_arg && is_ok then
+      ck, {e with pexpr_desc = PE_app(id, e_l', id_reset); pexpr_clk = ck}
     else
       raise (Bad_Clock (e.pexpr_loc, "Application : " ^ (List.fold_left (fun out c -> out ^ (string_ck c) ^ ", ") "(" ck_l) ^ ")"))
   |PE_fby(c, e2) ->
@@ -136,9 +138,12 @@ let check_eq env eq =
   let eq' = {eq with peq_expr = e';} in
   match eq.peq_patt.ppatt_desc with
   |PP_ident(id) ->
+    print_string "AQUI\n";
     let ck_id = IdentMap.find id var_env in
     if ck_id = CK_free then
       eq', node_env, IdentMap.add id ck var_env
+    else if ck = CK_free then
+      eq', node_env, var_env
     else if ck_id = ck then
       eq', node_env, var_env
     else
@@ -149,6 +154,7 @@ let check_eq env eq =
   |PP_tuple(id_l) -> begin
     match ck with
     |CK_tuple(ck_l) ->
+    print_string "ESTA\n";
 (*      print_list print_string id_l;
       print_list (fun ck -> print_string (string_ck ck)) ck_l;*)
       let rec check_clock_list id_l ck_l var_env =

@@ -109,11 +109,12 @@ let rec print_expr_lustre e =
     print_expr_lustre e';
     print_string " else ";
     print_expr_lustre e''
-  |PEL_app(id, exp_l) ->
+  |PEL_app(id, exp_l, reset_id) ->
     print_id id;
     print_string "(";
     print_separated_list print_expr_lustre ", " exp_l;
-    print_string ")"
+    print_string ") every ";
+    print_id reset_id
   |PEL_fby(c, e') ->
     print_const c;
     print_string " fby ";
@@ -220,11 +221,12 @@ let rec print_expr e =
     print_string " ";
     print_expr e2;
     print_string ")"
-  |PE_app(id, exp_l) ->
+  |PE_app(id, exp_l, reset_id) ->
     print_id id;
     print_string "(";
     print_separated_list print_expr ", " exp_l;
-    print_string ")"
+    print_string ") every ";
+    print_id reset_id
   |PE_fby(c, e') ->
     print_const c;
     print_string " fby ";

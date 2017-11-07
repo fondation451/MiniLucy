@@ -26,7 +26,7 @@ and p_expr_lustre_desc =
   |PEL_op of uop * p_expr_lustre
   |PEL_binop of op * p_expr_lustre * p_expr_lustre
   |PEL_if of p_expr_lustre * p_expr_lustre * p_expr_lustre
-  |PEL_app of ident * p_expr_lustre list
+  |PEL_app of ident * p_expr_lustre list * ident
   |PEL_fby of const * p_expr_lustre
   |PEL_tuple of p_expr_lustre list
   |PEL_when of p_expr_lustre * ident * p_expr_lustre

@@ -31,6 +31,7 @@ Clément PASCUTTO <clement.pascutto@ens.fr>
       "div", DIV;
       "else", ELSE;
       "end", END;
+      "every", EVERY;
       "fby", FBY;
       "if", IF;
       "int", INT;

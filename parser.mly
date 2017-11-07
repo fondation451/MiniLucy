@@ -41,6 +41,7 @@ Cl�ment PASCUTTO <clement.pascutto@ens.fr>
 %token END
 %token EOF
 %token EQUAL
+%token EVERY
 %token FBY
 %token NEQ
 %token REAL
@@ -194,7 +195,8 @@ expr:
 |LPAREN expr RPAREN {$2}
 |const {$1}
 |IDENT {mk_expr (PEL_ident $1)}
-|IDENT LPAREN expr_comma_list_empty RPAREN {mk_expr (PEL_app ($1, $3))}
+|f = IDENT; LPAREN; arg = expr_comma_list_empty; RPAREN; EVERY; reset = IDENT; {mk_expr (PEL_app (f, arg, reset))}
+|f = IDENT; LPAREN; arg = expr_comma_list_empty; RPAREN; {mk_expr (PEL_app (f, arg, lustre_bool_false))}
 |IF expr THEN expr ELSE expr {mk_expr (PEL_if ($2, $4, $6))}
 |expr PLUS expr {mk_expr (PEL_binop (Op_add, $1, $3))}
 |expr MINUS expr {mk_expr (PEL_binop (Op_sub, $1, $3))}

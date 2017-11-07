@@ -35,7 +35,7 @@ let rec normalize_exp e vars eqs =
     let e1', vars, eqs = normalize_exp e1 vars eqs in
     let e2', vars, eqs = normalize_exp e2 vars eqs in
     {e with pexpr_desc = PE_binop(op, e1', e2')}, vars, eqs
-  |PE_app(id, e_l) -> substitute_with_id ()
+  |PE_app(id, e_l, id_reset) -> substitute_with_id ()
   |PE_fby(c, e2) -> substitute_with_id ()
   |PE_tuple(e_l) ->
     let e_l', vars, eqs =
@@ -77,14 +77,14 @@ and normalize_eq eq vars eqs =
       let e2', vars, eqs = normalize_exp e2 vars eqs in
       let new_eq = {eq with peq_expr = {e with pexpr_desc = PE_fby(c, e2')}} in
       vars, new_eq::eqs
-    |PE_app(id, e_l) ->
+    |PE_app(id, e_l, id_reset) ->
       let e_l', vars, eqs =
         List.fold_left
           (fun (out, vars, eqs) e1 ->
             let e1', vars, eqs = normalize_exp e1 vars eqs in
             e1'::out, vars, eqs) ([], vars, eqs) e_l
       in
-      let new_eq = {eq with peq_expr = {e with pexpr_desc = PE_app(id, List.rev e_l')}} in
+      let new_eq = {eq with peq_expr = {e with pexpr_desc = PE_app(id, List.rev e_l', id_reset)}} in
       vars, new_eq::eqs
     |_ ->
       let e', vars, eqs = normalize_merge e vars eqs in
@@ -93,14 +93,14 @@ and normalize_eq eq vars eqs =
   end
   |PP_tuple(pid_l) -> begin
     match e.pexpr_desc with
-    |PE_app(id, e_l) ->
+    |PE_app(id, e_l, id_reset) ->
       let e_l', vars, eqs =
         List.fold_left
           (fun (out, vars, eqs) e1 ->
             let e1', vars, eqs = normalize_exp e1 vars eqs in
             e1'::out, vars, eqs) ([], vars, eqs) e_l
       in
-      let new_eq = {eq with peq_expr = {e with pexpr_desc = PE_app(id, e_l')}} in
+      let new_eq = {eq with peq_expr = {e with pexpr_desc = PE_app(id, e_l', id_reset)}} in
       vars, new_eq::eqs
     |PE_tuple(e_l) ->
       List.fold_left2
