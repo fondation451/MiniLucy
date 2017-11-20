@@ -79,7 +79,7 @@ let rec trans_expr env e =
   |PE_fby(c, e1) -> assert false
   |PE_tuple(e_l) -> assert false
   |PE_when(e1, enum_id, id) -> trans_expr env e1
-  |PE_current(e1) -> assert false
+  |PE_current(e1) -> trans_expr env e1
   |PE_merge(id, merge_l) -> assert false
 
 and trans_merge env var_id e =
@@ -97,7 +97,7 @@ and trans_eq env eq =
     |PP_ident(id) ->
       let new_m = IdentMap.add id e.pexpr_ty m in
       let new_si = (IOBJ_state_affect(id, OBJ_const(c)))::si in
-      let new_s = (control e.pexpr_clk (IOBJ_state_affect(id, trans_expr env e1)))::s in
+      let new_s = (control e.pexpr_clk (IOBJ_state_affect(id, trans_expr (new_m, si, j, d, s) e1)))::s in
       new_m, new_si, j, d, new_s
     |PP_tuple(id_l) -> assert false
   end
@@ -137,8 +137,13 @@ let trans_node node =
   let name = node.pn_name in
   let memory = IdentMap.bindings m in
   let instance = IdentMap.bindings j in
+  let var_p =
+    List.filter
+      (fun x -> not (List.mem x memory))
+      (List.filter (fun (id, _) -> not (List.exists (fun p -> p.param_id = id) node.pn_input)) (IdentMap.bindings d))
+  in
   let reset = si in
-  let step = (new_inputs, new_outputs, IdentMap.bindings d, join_list (List.rev s)) in
+  let step = (new_inputs, new_outputs, var_p, join_list (List.rev s)) in
   name, memory, instance, reset, step
 ;;
 

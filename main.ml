@@ -75,6 +75,7 @@ let () =
     exit 1
   end;
 
+  let f_name = Filename.remove_extension !input_file in
 
   let f = open_in !input_file in
   let buf = Lexing.from_channel f in
@@ -162,7 +163,7 @@ let () =
 
       let source = To_c.file_to_c po in
 
-      Export_source.export "out.c" source;
+      Export_source.export (f_name ^ ".c") source;
 
       exit 0;
     with
@@ -183,6 +184,10 @@ let () =
         localisation (fst loc);
         eprintf "Clock error@.";
         Printf.printf "%s\n" str;
+        exit 1
+      |To_c.No_Main ->
+        eprintf "C Generation error@.";
+        Printf.printf "No Main\n";
         exit 1
   end else begin
     try

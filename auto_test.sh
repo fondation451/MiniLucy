@@ -274,6 +274,76 @@ echo
 echo; }
 
 
+part6 () {
+
+ext=$1
+
+score_comp=0
+score_out=0
+score_test=0
+max=0
+
+echo
+echo "Part 6: Code Generation"
+
+timeout="why3-cpulimit 30 0 -h"
+
+for f in tests/syntax/good/*.$ext; do
+  echo -n "."
+  c_file=tests/syntax/good/`basename $f .$ext`.c
+  rm -f $c_file
+  expected=tests/syntax/good//`basename $f .$ext`.lout
+  input_f=tests/syntax/good/`basename $f .$ext`.lin
+  max=`expr $max + 1`;
+  echo $input_f;
+  if compile $f; then
+    rm -f out
+    score_comp=`expr $score_comp + 1`;
+    if gcc $c_file && eval "./a.out $input_f > out"; then
+      score_out=`expr $score_out + 1`;
+      if cmp --quiet out $expected; then
+        score_test=`expr $score_test + 1`;
+      else
+        echo
+        echo "FAIL : wrong output $f"
+      fi
+    else
+      echo
+      echo "FAIL : generated code doesn't work $f"
+    fi
+  else
+    echo
+    echo "FAIL : code generation $f (should succeed)"
+  fi
+done
+echo
+
+echo "Part 6:";
+percent=`expr 100 \* $score_comp / $max`;
+echo "Code Generation : $score_comp/$max : $percent%";
+percent=`expr 100 \* $score_out / $max`;
+echo "Code Execution : $score_out/$max : $percent%";
+percent=`expr 100 \* $score_test / $max`;
+echo "Code Behaviour : $score_test/$max : $percent%";}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -288,6 +358,7 @@ test () {
   part3 $ext;
   part4 $ext;
   part5 $ext;
+  part6 $ext;
 }
 
 
@@ -303,6 +374,6 @@ test lus
 echo
 echo
 
-test elus
+#test elus
 
-echo
+#echo

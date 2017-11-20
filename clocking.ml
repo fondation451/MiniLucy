@@ -47,6 +47,13 @@ let equal_ck ck1 ck2 =
   |_ -> ck1 = ck2
 ;;
 
+let ck_same ck1 ck2 =
+  match ck1, ck2 with
+  |CK_free, _ -> ck2, true
+  |_, CK_free -> ck1, true
+  |_ -> ck1, ck1 = ck2
+;;
+
 let rec check_clock env e =
   let node_env, var_env = env in
   match e.pexpr_desc with
@@ -60,8 +67,9 @@ let rec check_clock env e =
   |PE_binop(op, e1, e2) ->
     let ck1, e1' = check_clock env e1 in
     let ck2, e2' = check_clock env e2 in
-    if equal_ck ck1 ck2 then
-      ck1, {e with pexpr_desc = PE_binop(op, e1', e2'); pexpr_clk = ck1}
+    let ck, is_equal = ck_same ck1 ck2 in
+    if is_equal then
+      ck, {e with pexpr_desc = PE_binop(op, e1', e2'); pexpr_clk = ck}
     else
       raise (Bad_Clock (e.pexpr_loc, "Binary operator : different clocks " ^ (string_ck ck1) ^ " <> " ^ (string_ck ck2)))
   |PE_app(id, e_l, id_reset) ->
@@ -75,7 +83,7 @@ let rec check_clock env e =
       match l with |[] -> CK_base, false |h::t -> loop h t []
     in*)
     let same_elem l =
-      let rec loop x l = match l with |[] -> x, true |h::t -> print_endline (string_ck h); if equal_ck x h then loop x t else CK_base, false in
+      let rec loop x l = match l with |[] -> x, true |h::t -> print_endline ("ICI : " ^ string_ck h); if equal_ck x h then loop x t else CK_base, false in
       match l with |[] -> CK_base, false |h::t -> loop h t
     in
     let id_reset_ck = try IdentMap.find id_reset var_env with Not_found -> CK_free in
@@ -107,10 +115,10 @@ let rec check_clock env e =
       let ck = CK_on (ck1, enum_id, id) in
       ck, {e with pexpr_desc = PE_when(e1', enum_id, id); pexpr_clk = ck}
     else
-      raise (Bad_Clock (e.pexpr_loc, "When : " ^ (string_ck ck1) ^ " <> " ^ (string_ck ck_id)))
+      raise (Bad_Clock (e.pexpr_loc, "When " ^ enum_id ^ "(" ^ id ^ ") : " ^ (string_ck ck1) ^ " <> " ^ (string_ck ck_id)))
   |PE_current(e) ->
-    let ck, e' = check_clock env e in
-    ck, {e with pexpr_desc = PE_current(e'); pexpr_clk = ck}
+    let _, e' = check_clock env e in
+    CK_base, {e with pexpr_desc = PE_current(e'); pexpr_clk = CK_base}
   |PE_merge(id, merge_l) ->
     let ck_id = find_param_ck var_env id in
     let ck_l, merge_l' = List.split (List.map (fun (id, e') -> let ck, e'' = check_clock env e' in (ck, (id, e''))) merge_l) in
@@ -138,7 +146,7 @@ let check_eq env eq =
   let eq' = {eq with peq_expr = e';} in
   match eq.peq_patt.ppatt_desc with
   |PP_ident(id) ->
-    print_string "AQUI\n";
+    print_string ("AQUI "^ id ^ "\n");
     let ck_id = IdentMap.find id var_env in
     if ck_id = CK_free then
       eq', node_env, IdentMap.add id ck var_env

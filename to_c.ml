@@ -16,6 +16,7 @@ open Ast;;
 open Ast_object;;
 
 exception Impl_Op;;
+exception No_Main;;
 
 let (<<<) = Buffer.add_string;;
 
@@ -172,15 +173,16 @@ let def_to_c def code =
   code <<< "_out;\n\n";
 
   (* reset *)
-  if reset <> [] then begin
-    code <<< "void ";
-    code <<< name;
-    code <<< "_reset(";
-    code <<< name;
-    code <<< "_mem* self) {\n";
-    List.iter (fun i -> instr_to_c instance i code) reset;
-    code <<< "}\n\n"
-  end;
+  code <<< "void ";
+  code <<< name;
+  code <<< "_reset(";
+  code <<< name;
+  code <<< "_mem* self) {\n";
+  if reset <> [] then
+    List.iter (fun i -> instr_to_c instance i code) reset
+  else
+    code <<< "char dummy;\n(void) dummy;\n";
+  code <<< "}\n\n";
 
   (* step *)
   code <<< name;
@@ -198,36 +200,97 @@ let def_to_c def code =
   code <<< "_mem* self) {\n";
   List.iter
     (fun (id, ty) ->
+      Printf.printf "var_loc ===== %s\n" id;
       code <<< (str_ty ty);
       code <<< " ";
       code <<< id;
       code <<< "; ")
     var_loc;
   code <<< "\n";
-  List.iter
-    (fun (id, ty) ->
-      code <<< (str_ty ty);
-      code <<< " ";
-      code <<< id;
-      code <<< "; ")
-    var_out;
   code <<< "\n";
   instr_to_c instance step_i code;
   code <<< name;
   code <<< "_out ____out____ = {";
+  let str_id_mem id = if List.exists (fun (id', _) -> id' = id) memory then ("self->" ^ id) else id in
   let rec loop var_out =
     match var_out with
     |[] -> code <<< "};\n"
-    |[(id, ty)] -> code <<< id; loop []
-    |(id, ty)::t -> code <<< id; code <<< ", "; loop t
+    |[(id, ty)] -> code <<< (str_id_mem id); loop []
+    |(id, ty)::t -> code <<< (str_id_mem id); code <<< ", "; loop t
   in loop var_out;
   code <<< "return ____out____;\n";
   code <<< "}\n"
 ;;
 
+let rec find_step_main def_l =
+  match def_l with
+  |[] -> raise No_Main
+  |(id, _, _, _, step)::t -> if id = "main" then step else find_step_main t
+;;
+
+let mk_main step_main code =
+  let vinput, voutput, vvar, _ = step_main in
+  code <<<
+   ("int main(int argc, char* argv[]) {\n" ^
+    "FILE* f = fopen(argv[1], \"r\");\n" ^
+    "char ch;\n" ^
+    "int linecount = 0;\n" ^
+    "while ((ch=getc(f)) != EOF) {\n" ^
+    "if (ch == '\\n') { ++linecount; }\n" ^
+    "}\n" ^
+    "rewind(f);\n" ^
+    "int i;\n" ^
+    "main_out out;\n" ^
+    "main_mem mem;\n" ^
+    "main_reset(&mem);\n");
+  List.iter
+    (fun (id, ty) ->
+      match ty with
+      |Tint -> code <<< ("int " ^ id ^ ";\n")
+      |Treal -> code <<< ("double " ^ id ^ ";\n")
+      |Ttype(tid) -> code <<< (tid ^ " " ^ id ^ ";\n")
+      |Ttuple(_) -> assert false)
+    vinput;
+  code <<< "for(i = 0 ; i < linecount ; i++) {\n";
+  List.iter
+    (fun (id, ty) ->
+      match ty with
+      |Tint -> code <<< ("fscanf(f, \"%d\", &" ^ id ^ ");\n")
+      |Treal -> code <<< ("fscanf(f, \"%f\", &" ^ id ^ ");\n")
+      |Ttype(tid) ->
+        code <<< "fscanf(f, \"%s\", ___buffer___);\n";
+        code <<< (id ^ " = scan_" ^ tid ^ "();\n")
+      |Ttuple(_) -> assert false)
+    vinput;
+  code <<< "out = main_step(";
+  List.iter (fun (id, _) -> code <<< (id ^ ", ")) vinput;
+  code <<< "&mem);\n";
+(*  code <<< "printf(\"Step %d\\n\", i);\n";*)
+  List.iteri
+    (fun i (id, ty) ->
+      match ty with
+      |Tint ->
+        code <<< ("printf(\""(* ^ id ^ " = " *)^ "%d\\n\", out.arg" ^ (string_of_int i) ^ ");\n")
+      |Treal -> code <<< ("printf(\""(* ^ id ^ " = "*) ^ "%f\\n\", out.arg" ^ (string_of_int i) ^ ");\n")
+      |Ttype(tid) ->
+        (*code <<< "printf(\"" ^ id ^ " = \");\n";*)
+        code <<< ("print_" ^ tid  ^ "(out.arg" ^ (string_of_int i) ^ ");\n");
+        code <<< "printf(\"\\n\");\n"
+      |_ -> assert false)
+    voutput;
+  code <<< "}\n";
+  code <<< "fclose(f);\n";
+  code <<< "return 0;\n}\n\n"
+;;
+
 let file_to_c f =
   let ty_map, def_l = f in
   let code = Buffer.create 100 in
+  code <<< "#include <stdio.h>\n";
+  code <<< "#include <stdlib.h>\n";
+  code <<< "#include <string.h>\n\n\n";
+  code <<< "char ___buffer___[100];\n\n\n";
+  (* ENUM TYPE *)
   IdentMap.iter
     (fun ty enum_l ->
       code <<< "typedef enum {";
@@ -238,6 +301,23 @@ let file_to_c f =
         |h::t -> code <<< h; code <<< ", "; loop t
       in loop enum_l)
     ty_map;
+  (* ENUM TYPE PRINTING *)
+  IdentMap.iter
+    (fun ty enum_l ->
+      code <<< ("void print_" ^ ty ^ "(int r) {\n");
+      List.iteri (fun i enum_id -> code <<< ("if(r == " ^ (string_of_int i) ^") printf(\"" ^ enum_id ^ "\");\n")) enum_l;
+      code <<< "}\n\n";)
+    ty_map;
+  (* ENUM TYPE SCANNING *)
+  IdentMap.iter
+    (fun ty enum_l ->
+      code <<< ("int scan_" ^ ty ^ "(){\n");
+      List.iteri
+        (fun i enum_id -> code <<< ("if(strcmp(___buffer___, \"" ^ enum_id ^ "\") == 0) return " ^ (string_of_int i) ^ ";\n"))
+        enum_l;
+      code <<< ("printf(\"Enum Type Parsing : %s (" ^ ty ^ ")\\n\", ___buffer___);\nexit(1);\n}\n\n"))
+    ty_map;
   List.iter (fun def -> def_to_c def code) def_l;
+  mk_main (find_step_main def_l) code;
   code
 ;;

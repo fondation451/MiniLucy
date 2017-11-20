@@ -95,7 +95,7 @@ file: type_decs const_decs node_decs EOF {($1, $2, $3)}
 ;
 
 type_decs:
-  |/* empty */ {IdentMap.add "bool" ["True" ; "False"] IdentMap.empty}
+  |/* empty */ {IdentMap.add "bool" ["False" ; "True"] IdentMap.empty}
   |type_dec type_decs {let ty, ty_val = $1 in IdentMap.add ty ty_val $2}
 ;
 
