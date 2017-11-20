@@ -1,4 +1,4 @@
-node bool_add(A: bool; B: bool) returns (Z: int);
+node main(A: bool; B: bool) returns (Z: int);
 let
 	Z = (if A then 1 else 0)
 		+

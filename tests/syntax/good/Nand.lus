@@ -1,4 +1,4 @@
-node Nand(X: bool; Y: bool)
+node main(X: bool; Y: bool)
   returns (Z: bool);
 var U: bool;
 let

@@ -1,4 +1,4 @@
-node counter() returns (Z: int);
+node main(A: int) returns (Z: int);
 let
 	Z = 0 fby 1 + (Z);
 tel
