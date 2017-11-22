@@ -1,11 +1,8 @@
-node merge_bool_alt(clk : bool ; i1 : int when True(clk) ; i2 : int when False(clk))
-returns (y: int);
+node main(clk : bool ; i1 : int ; i2 : int) returns (y: int);
+var i1_when_true : int when True(clk);
+    i2_when_false : int when False(clk);
 let
-  y = merge clk (True -> i1) (False -> i2);
-tel
-
-node merge_bool_ter(clk : bool ; i1 : int when True(clk) ; i2 : int when False(clk))
-returns (y: int);
-let
-  y = merge clk (False -> i2) (True -> i1) ;
+  i1_when_true = i1 when True(clk);
+  i2_when_false = i2 when False(clk);
+  y = merge clk (True -> i1_when_true) (False -> i2_when_false);
 tel

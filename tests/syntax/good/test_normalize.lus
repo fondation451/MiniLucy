@@ -1,7 +1,9 @@
-node test_normalize(c: bool; x: int; k: int when True(c)) returns (o: int);
+node main(c: bool; x: int; k: int) returns (o: int);
 var z: int when True(c);
+    k_when_true_c : int when True(c);
 let
-  z = ((((4 fby o) * 3) when True(c)) + k);
+  k_when_true_c = k when True(c);
+  z = ((((4 fby o) * 3) when True(c)) + k_when_true_c);
   o = (merge c (True -> (5 fby (z + 1)) + 2)
                (False -> ((6 fby x)) when False(c)));
 tel
