@@ -100,7 +100,7 @@ and normalize_eq eq vars eqs =
             let e1', vars, eqs = normalize_exp e1 vars eqs in
             e1'::out, vars, eqs) ([], vars, eqs) e_l
       in
-      let new_eq = {eq with peq_expr = {e with pexpr_desc = PE_app(id, e_l', id_reset)}} in
+      let new_eq = {eq with peq_expr = {e with pexpr_desc = PE_app(id, List.rev e_l', id_reset)}} in
       vars, new_eq::eqs
     |PE_tuple(e_l) ->
       List.fold_left2

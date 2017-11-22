@@ -33,13 +33,13 @@ let rec string_ck ck =
   |CK_tuple(ck_l) -> (List.fold_left (fun out ck' -> out ^ (string_ck ck') ^ ", ") "(" ck_l) ^ ")"
 ;;
 
-let rec synchronize_over ck_base ck =
+(*let rec synchronize_over ck_base ck =
   match ck with
   |CK_base -> ck_base
   |CK_free -> CK_free
   |CK_on(ck', enum_id, id) -> CK_on(synchronize_over ck_base ck', enum_id, id)
   |CK_tuple(ck_l) -> CK_tuple(List.map (synchronize_over ck_base) ck_l)
-;;
+;;*)
 
 let equal_ck ck1 ck2 =
   match ck1, ck2 with
@@ -83,20 +83,26 @@ let rec check_clock env e =
       match l with |[] -> CK_base, false |h::t -> loop h t []
     in*)
     let same_elem l =
-      let rec loop x l = match l with |[] -> x, true |h::t -> print_endline ("ICI : " ^ string_ck h); if equal_ck x h then loop x t else CK_base, false in
+      let rec loop x l =
+        match l with
+        |[] -> x, true
+        |h::t ->
+          let x', is_equal = ck_same x h in
+          print_endline ("ICI : " ^ string_ck h);
+          if is_equal then loop x' t else CK_base, false in
       match l with |[] -> CK_base, false |h::t -> loop h t
     in
     let id_reset_ck = try IdentMap.find id_reset var_env with Not_found -> CK_free in
     let ck_l, e_l' = List.split (List.map (check_clock env) e_l) in
-    let ck_arg, is_ok = same_elem ck_l in
-    let ck =
+    let ck, is_ok = same_elem (id_reset_ck::ck_l) in
+    (*let ck =
       try
         match List.map (fun p -> p.param_ck) (IdentMap.find id node_env).pn_output with
         |[ck] -> synchronize_over ck_arg ck
         |_ as ck_l -> synchronize_over ck_arg (CK_tuple(ck_l))
       with Not_found -> assert false
-    in
-    if equal_ck id_reset_ck ck_arg && is_ok then
+    in*)
+    if is_ok then
       ck, {e with pexpr_desc = PE_app(id, e_l', id_reset); pexpr_clk = ck}
     else
       raise (Bad_Clock (e.pexpr_loc, "Application : " ^ (List.fold_left (fun out c -> out ^ (string_ck c) ^ ", ") "(" ck_l) ^ ")"))
@@ -160,28 +166,21 @@ let check_eq env eq =
           (eq.peq_patt.ppatt_loc,
           "Variable : " ^ id ^ " incompatibility clock " ^ (string_ck ck_id) ^ " <> " ^ (string_ck ck)))
   |PP_tuple(id_l) -> begin
-    match ck with
-    |CK_tuple(ck_l) ->
-    print_string "ESTA\n";
-(*      print_list print_string id_l;
-      print_list (fun ck -> print_string (string_ck ck)) ck_l;*)
-      let rec check_clock_list id_l ck_l var_env =
-        match id_l, ck_l with
-        |[], [] -> eq', node_env, var_env
-        |id::t1, ck'::t2 ->
-          let ck_id = IdentMap.find id var_env in
-          if ck_id = CK_free then
-            check_clock_list t1 t2 (IdentMap.add id ck' var_env)
-          else if ck_id = ck' then
-            check_clock_list t1 t2 var_env
-          else
-            raise
-              (Bad_Clock
-                (eq.peq_patt.ppatt_loc,
-                "Variable : " ^ id ^ " incompatibility clock " ^ (string_ck ck_id) ^ " <> " ^ (string_ck ck')))
-        |_ -> raise (Bad_Clock (eq.peq_patt.ppatt_loc, "Tuple : different length between infered clock and paramter clock !"))
-      in check_clock_list id_l ck_l var_env
-    |_ -> raise (Bad_Clock (eq.peq_patt.ppatt_loc, "Parameter tuple : no clock tuple infered " ^ (string_ck ck)))
+    let rec check_clock_list id_l ck var_env =
+      match id_l with
+      |[] -> eq', node_env, var_env
+      |id::t1 ->
+        let ck_id = IdentMap.find id var_env in
+        if ck_id = CK_free then
+          check_clock_list t1 ck (IdentMap.add id ck var_env)
+        else if ck_id = ck then
+          check_clock_list t1 ck var_env
+        else
+          raise
+            (Bad_Clock
+              (eq.peq_patt.ppatt_loc,
+              "Variable : " ^ id ^ " incompatibility clock " ^ (string_ck ck_id) ^ " <> " ^ (string_ck ck)))
+    in check_clock_list id_l ck var_env
   end
 ;;
 

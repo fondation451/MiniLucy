@@ -47,19 +47,34 @@ let rec merge_case case_l1 case_l2 =
       let elem_of2, new_case_l2 = remove_l (fun (enum_id2, instr2) -> enum_id2 = enum_id1) case_l2 in
       match elem_of2 with
       |None -> loop t1 new_case_l2 ((enum_id1, instr1)::out)
-      |Some((enum_id2, instr2)) -> loop t1 new_case_l2 ((enum_id1, join instr1 instr2)::out)
+      |Some((enum_id2, instr2)) -> begin
+        match join instr1 instr2 with
+        |None -> loop t1 new_case_l2 ((enum_id1, IOBJ_sequence(instr1, instr2))::out)
+        |Some(merge_f) -> loop t1 new_case_l2 ((enum_id1, merge_f)::out)
+      end
     end
   in loop case_l1 case_l2 []
 and join s1 s2 =
   match s1, s2 with
-  |IOBJ_case(id1, case_l1), IOBJ_case(id2, case_l2) when id1 = id2 -> IOBJ_case(id1, merge_case case_l1 case_l2)
-  |_ -> IOBJ_sequence(s1, s2)
+  |IOBJ_case(id1, case_l1), IOBJ_case(id2, case_l2) when id1 = id2 -> Some(IOBJ_case(id1, merge_case case_l1 case_l2))
+  |_ -> None
 ;;
 
-let rec join_list instr_l =
-  match instr_l with
-  |[] -> IOBJ_skip
-  |h::t -> join h (join_list t)
+let join_list instr_l =
+  let rec sequence_inst instr_l =
+    match instr_l with
+    |[] -> IOBJ_skip
+    |h::t -> IOBJ_sequence(h, sequence_inst t)
+  and join_iter instr_l out =
+    match instr_l with
+    |[] -> sequence_inst (List.rev out)
+    |[h] -> join_iter [] (h::out)
+    |h1::h2::t -> begin
+      match join h1 h2 with
+      |None -> join_iter (h2::t) (h1::out)
+      |Some(merge_f) -> join_iter (merge_f::t) out
+    end
+  in join_iter instr_l []
 ;;
 
 let rec trans_expr env e =
@@ -75,12 +90,12 @@ let rec trans_expr env e =
       raise (Object_Error ("the ident " ^ id ^ " is neither a variable nor a memory"))
   |PE_op(op, e1) -> OBJ_op(op, trans_expr env e1)
   |PE_binop(op, e1, e2) -> OBJ_binop(op, trans_expr env e1, trans_expr env e2)
-  |PE_app(id, e_l, id_reset) -> assert false
-  |PE_fby(c, e1) -> assert false
+  |PE_app(id, e_l, id_reset) -> assert false (* in trans_eq *)
+  |PE_fby(c, e1) -> assert false (* in trans_eq *)
   |PE_tuple(e_l) -> assert false
   |PE_when(e1, enum_id, id) -> trans_expr env e1
   |PE_current(e1) -> trans_expr env e1
-  |PE_merge(id, merge_l) -> assert false
+  |PE_merge(id, merge_l) -> assert false (* in trans_merge *)
 
 and trans_merge env var_id e =
   match e.pexpr_desc with
@@ -111,7 +126,14 @@ and trans_eq env eq =
     let new_e_l = List.map (fun e1 -> trans_expr env e1) e_l in
     let new_si = (IOBJ_reset(new_instance))::si in
     let new_j = IdentMap.add new_instance id j in
-    let new_s = (control e.pexpr_clk (IOBJ_step(pattern, new_instance, new_e_l)))::s in
+    let new_s =
+      if id_reset <> lustre_bool_false then
+        (control e.pexpr_clk (IOBJ_step(pattern, new_instance, new_e_l)))::
+        (control e.pexpr_clk (IOBJ_case(id_reset, [lustre_bool_true, IOBJ_reset(new_instance)])))::
+        s
+      else
+        (control e.pexpr_clk (IOBJ_step(pattern, new_instance, new_e_l)))::s
+    in
     m, new_si, new_j, d, new_s
   end
   |_ -> begin

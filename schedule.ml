@@ -173,6 +173,18 @@ let compare_eqs ordered_id eq1 eq2 =
   in loop ids1
 ;;
 
+let delay_fby eq_l =
+  let rec loop eq_l fby_l out =
+    match eq_l with
+    |[] -> List.rev (List.rev_append fby_l out)
+    |eq::t -> begin
+      match eq.peq_expr.pexpr_desc with
+      |PE_fby(_) -> loop t (eq::fby_l) out
+      |_ -> loop t fby_l (eq::out)
+    end
+  in loop eq_l [] []
+;;
+
 let schedule_eqs eqs =
   let var_map, g, degree_m = mk_g eqs in
 (*  print_endline "var_map :";
@@ -203,7 +215,7 @@ let schedule_eqs eqs =
 (*    Lustre_printer.print_separated_list Lustre_printer.print_equation ";\n" out;
     print_string "\n\n\n";
     print_string "\n\n\n";*)
-    out
+    delay_fby out
 ;;
 
 let schedule_file f =

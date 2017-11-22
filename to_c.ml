@@ -95,19 +95,21 @@ let rec instr_to_c instance i code =
   |IOBJ_reset(id) ->
     let node_name = List.assoc id instance in
     code <<< node_name;
-    code <<< "_reset(inst->";
+    code <<< "_reset(self->";
     code <<< id;
-    code <<< ")"
+    code <<< ");\n"
   |IOBJ_step(id_l, id, e_l) ->
     let node_name = List.assoc id instance in
     let acc = gen_new_id () in
+    code <<< node_name;
+    code <<< "_out ";
     code <<< acc;
     code <<< " = ";
     code <<< node_name;
     code <<< "_step(";
     let rec loop e_l =
       match e_l with
-      |[] -> code <<< ";\n" |[h] -> expr_to_c h code; loop []
+      |[] -> code <<< ("self->" ^ id ^ ");\n")
       |h::t -> expr_to_c h code; code <<< ", "; loop t
     in loop e_l;
     List.iteri
@@ -115,7 +117,7 @@ let rec instr_to_c instance i code =
         code <<< pid;
         code <<< " = ";
         code <<< acc;
-        code <<< "->arg";
+        code <<< ".arg";
         code <<< (string_of_int i);
         code <<< ";\n")
       id_l
@@ -148,13 +150,13 @@ let def_to_c def code =
       code <<< id;
       code <<< ";\n")
     memory;
-    List.iter
-      (fun (id, f_name) ->
-        code <<< f_name;
-        code <<< "_mem* ";
-        code <<< id;
-        code <<< ";\n")
-      instance;
+  List.iter
+    (fun (id, f_name) ->
+      code <<< f_name;
+      code <<< "_mem* ";
+      code <<< id;
+      code <<< ";\n")
+    instance;
   code <<< "} ";
   code <<< name;
   code <<< "_mem;\n\n";
@@ -208,15 +210,25 @@ let def_to_c def code =
     var_loc;
   code <<< "\n";
   code <<< "\n";
+  List.iter
+    (fun (id, ty) ->
+      code <<< (str_ty ty);
+      code <<< " ";
+      code <<< id;
+      code <<< " = self->";
+      code <<< id;
+      code <<< ";\n")
+    memory;
+  code <<< "\n";
+  code <<< "\n";
   instr_to_c instance step_i code;
   code <<< name;
   code <<< "_out ____out____ = {";
-  let str_id_mem id = if List.exists (fun (id', _) -> id' = id) memory then ("self->" ^ id) else id in
   let rec loop var_out =
     match var_out with
     |[] -> code <<< "};\n"
-    |[(id, ty)] -> code <<< (str_id_mem id); loop []
-    |(id, ty)::t -> code <<< (str_id_mem id); code <<< ", "; loop t
+    |[(id, ty)] -> code <<< id; loop []
+    |(id, ty)::t -> code <<< id; code <<< ", "; loop t
   in loop var_out;
   code <<< "return ____out____;\n";
   code <<< "}\n"

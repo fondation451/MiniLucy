@@ -59,6 +59,7 @@ Cl�ment PASCUTTO <clement.pascutto@ens.fr>
 %token OR
 %token PLUS
 %token PRE
+%token RESET
 %token RETURNS
 %token RPAREN
 %token SEMICOL
