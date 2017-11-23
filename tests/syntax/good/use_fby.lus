@@ -4,7 +4,7 @@ let
    after = x or (False fby after);
 tel
 
-node use_fby(x: bool) returns (res: bool);
+node main(x: bool) returns (res: bool);
 let
   res = after(x);
 tel
