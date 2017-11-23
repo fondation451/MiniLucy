@@ -28,7 +28,7 @@ and p_expr_lustre_desc =
   |PEL_if of p_expr_lustre * p_expr_lustre * p_expr_lustre
   |PEL_app of ident * p_expr_lustre list * ident
   |PEL_fby of const * p_expr_lustre
-  |PEL_tuple of p_expr_lustre list
+(*  |PEL_tuple of p_expr_lustre list*)
   |PEL_when of p_expr_lustre * ident * p_expr_lustre
   |PEL_current of p_expr_lustre
   |PEL_merge of ident * (ident * p_expr_lustre) list

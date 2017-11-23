@@ -42,7 +42,7 @@ and p_expr_desc =
   |PE_binop of op * p_expr * p_expr
   |PE_app of ident * p_expr list * ident
   |PE_fby of const * p_expr
-  |PE_tuple of p_expr list
+(*  |PE_tuple of p_expr list*)
   |PE_when of p_expr * ident * ident
   |PE_current of p_expr
   |PE_merge of ident * (ident * p_expr) list

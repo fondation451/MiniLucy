@@ -37,14 +37,14 @@ let rec normalize_exp e vars eqs =
     {e with pexpr_desc = PE_binop(op, e1', e2')}, vars, eqs
   |PE_app(id, e_l, id_reset) -> substitute_with_id ()
   |PE_fby(c, e2) -> substitute_with_id ()
-  |PE_tuple(e_l) ->
+(*  |PE_tuple(e_l) ->
     let e_l', vars, eqs =
       List.fold_left
         (fun (out, vars, eqs) e ->
           let e', vars, eqs = normalize_exp e vars eqs in
           e'::out, vars, eqs) ([], vars, eqs) e_l
     in
-    {e with pexpr_desc = PE_tuple(List.rev e_l)}, vars, eqs
+    {e with pexpr_desc = PE_tuple(List.rev e_l)}, vars, eqs*)
   |PE_when(e1, enum_id, id) ->
     let e1', vars, eqs = normalize_exp e1 vars eqs in
     {e with pexpr_desc = PE_when(e1', enum_id, id)}, vars, eqs
@@ -102,12 +102,12 @@ and normalize_eq eq vars eqs =
       in
       let new_eq = {eq with peq_expr = {e with pexpr_desc = PE_app(id, List.rev e_l', id_reset)}} in
       vars, new_eq::eqs
-    |PE_tuple(e_l) ->
+(*    |PE_tuple(e_l) ->
       List.fold_left2
         (fun (vars, eqs) id e1 ->
           let eq1 = {peq_expr = e1; peq_patt = {eq.peq_patt with ppatt_desc = PP_ident(id)}} in
           let vars, eqs = normalize_eq eq1 vars eqs in
-          vars, eqs) (vars, eqs) pid_l e_l
+          vars, eqs) (vars, eqs) pid_l e_l*)
     |_ -> assert false
   end
 ;;

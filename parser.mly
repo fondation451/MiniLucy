@@ -215,7 +215,7 @@ expr:
 |const_fby FBY expr {mk_expr (PEL_fby ($1, $3))}
 |MINUS expr /* %prec uminus */ {mk_expr (PEL_op (UOp_minus, $2))}
 |NOT expr {mk_expr (PEL_op (UOp_not, $2))}
-|LPAREN expr COMMA expr_comma_list RPAREN {mk_expr (PEL_tuple ($2::$4))}
+(*|LPAREN expr COMMA expr_comma_list RPAREN {mk_expr (PEL_tuple ($2::$4))}*)
 |e1 = expr; WHEN; id = IDENT; LPAREN; e2 = expr; RPAREN {mk_expr (PEL_when (e1, id, e2))}
 |CURRENT expr {mk_expr (PEL_current ($2))}
 |MERGE; id = IDENT; e_l = list(merge_clause) {mk_expr (PEL_merge (id, e_l))}

@@ -109,11 +109,11 @@ let rec check_clock env e =
   |PE_fby(c, e2) ->
     let ck2, e2' = check_clock env e2 in
     ck2, {e with pexpr_desc = PE_fby(c, e2'); pexpr_clk = ck2}
-  |PE_tuple(e_l) ->
+(*  |PE_tuple(e_l) ->
     let rec mk_ck l ck_out = match l with |[] -> CK_tuple (ck_out) |h::t -> mk_ck t (h::ck_out) in
     let ck_l, e_l' = List.split (List.map (check_clock env) e_l) in
     let ck = mk_ck ck_l [] in
-    ck, {e with pexpr_desc = PE_tuple e_l'; pexpr_clk =  ck}
+    ck, {e with pexpr_desc = PE_tuple e_l'; pexpr_clk =  ck}*)
   |PE_when(e1, enum_id, id) ->
     let ck1, e1' = check_clock env e1 in
     let ck_id = find_param_ck var_env id in
@@ -157,7 +157,7 @@ let check_eq env eq =
     if ck_id = CK_free then
       eq', node_env, IdentMap.add id ck var_env
     else if ck = CK_free then
-      eq', node_env, var_env
+      {eq' with peq_expr = {e' with pexpr_clk = ck_id}}, node_env, var_env
     else if ck_id = ck then
       eq', node_env, var_env
     else

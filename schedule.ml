@@ -26,7 +26,7 @@ let left_expr e =
     |PE_binop(op, e1, e2) -> left_expr_rec e1 (left_expr_rec e2 out)
     |PE_app(id, e_l, id_reset) -> List.fold_left (fun out e1 -> left_expr_rec e1 out) (IdentSet.add id_reset out) e_l
     |PE_fby(c, e2) -> out
-    |PE_tuple(e_l) -> List.fold_left (fun out e1 -> left_expr_rec e1 out) out e_l
+(*    |PE_tuple(e_l) -> List.fold_left (fun out e1 -> left_expr_rec e1 out) out e_l*)
     |PE_when(e1, enum_id, id) -> left_expr_rec e1 (IdentSet.add id out)
     |PE_current(e1) -> left_expr_rec e1 out
     |PE_merge(id, merge_l) -> List.fold_left (fun out (enum_id, e1) -> left_expr_rec e1 out) (IdentSet.add id out) merge_l

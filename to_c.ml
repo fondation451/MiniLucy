@@ -174,16 +174,26 @@ let def_to_c def code =
   code <<< name;
   code <<< "_out;\n\n";
 
+  (* reset free var *)
+
+  code <<< ("char __first_reset_" ^ name ^ " = 0;\n");
+
   (* reset *)
   code <<< "void ";
   code <<< name;
   code <<< "_reset(";
   code <<< name;
   code <<< "_mem* self) {\n";
+  List.iter
+    (fun (id, f_name) ->
+      code <<< ("if(__first_reset_" ^ name ^ ") free(self->" ^ id ^ ");\n");
+      code <<< ("self->" ^ id ^ " = malloc(sizeof(" ^ f_name ^ "_mem));\n");)
+    instance;
   if reset <> [] then
     List.iter (fun i -> instr_to_c instance i code) reset
   else
     code <<< "char dummy;\n(void) dummy;\n";
+  code <<< ("__first_reset_" ^ name ^ " = 1;\n");
   code <<< "}\n\n";
 
   (* step *)
@@ -252,9 +262,9 @@ let mk_main step_main code =
     "}\n" ^
     "rewind(f);\n" ^
     "int i;\n" ^
-    "main_out out;\n" ^
-    "main_mem mem;\n" ^
-    "main_reset(&mem);\n");
+    "main_out* out = malloc(sizeof(main_out));\n" ^
+    "main_mem* mem = malloc(sizeof(main_mem));\n" ^
+    "main_reset(mem);\n");
   List.iter
     (fun (id, ty) ->
       match ty with
@@ -268,30 +278,32 @@ let mk_main step_main code =
     (fun (id, ty) ->
       match ty with
       |Tint -> code <<< ("fscanf(f, \"%d\", &" ^ id ^ ");\n")
-      |Treal -> code <<< ("fscanf(f, \"%f\", &" ^ id ^ ");\n")
+      |Treal -> code <<< ("fscanf(f, \"%lf\", &" ^ id ^ ");\n")
       |Ttype(tid) ->
         code <<< "fscanf(f, \"%s\", ___buffer___);\n";
         code <<< (id ^ " = scan_" ^ tid ^ "();\n")
       |Ttuple(_) -> assert false)
     vinput;
-  code <<< "out = main_step(";
+  code <<< "*out = main_step(";
   List.iter (fun (id, _) -> code <<< (id ^ ", ")) vinput;
-  code <<< "&mem);\n";
+  code <<< "mem);\n";
 (*  code <<< "printf(\"Step %d\\n\", i);\n";*)
   List.iteri
     (fun i (id, ty) ->
       match ty with
       |Tint ->
-        code <<< ("printf(\""(* ^ id ^ " = " *)^ "%d\\n\", out.arg" ^ (string_of_int i) ^ ");\n")
-      |Treal -> code <<< ("printf(\""(* ^ id ^ " = "*) ^ "%f\\n\", out.arg" ^ (string_of_int i) ^ ");\n")
+        code <<< ("printf(\""(* ^ id ^ " = " *)^ "%d\\n\", out->arg" ^ (string_of_int i) ^ ");\n")
+      |Treal -> code <<< ("printf(\""(* ^ id ^ " = "*) ^ "%.2lf\\n\", out->arg" ^ (string_of_int i) ^ ");\n")
       |Ttype(tid) ->
         (*code <<< "printf(\"" ^ id ^ " = \");\n";*)
-        code <<< ("print_" ^ tid  ^ "(out.arg" ^ (string_of_int i) ^ ");\n");
+        code <<< ("print_" ^ tid  ^ "(out->arg" ^ (string_of_int i) ^ ");\n");
         code <<< "printf(\"\\n\");\n"
       |_ -> assert false)
     voutput;
   code <<< "}\n";
   code <<< "fclose(f);\n";
+  code <<< "free(mem);\n";
+  code <<< "free(out);\n";
   code <<< "return 0;\n}\n\n"
 ;;
 

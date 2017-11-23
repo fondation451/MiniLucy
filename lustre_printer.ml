@@ -46,7 +46,7 @@ let print_const c =
 
 let rec print_ck_const ck_const =
   match ck_const with
-  |CK_base -> ()
+  |CK_base -> print_string " BASE"
   |CK_free -> print_string " (FREE!!!) "
   |CK_on(ck_const', enum_id, id) ->
     print_string " when ";
@@ -119,10 +119,10 @@ let rec print_expr_lustre e =
     print_const c;
     print_string " fby ";
     print_expr_lustre e'
-  |PEL_tuple(exp_l) ->
+(*  |PEL_tuple(exp_l) ->
     print_string "(";
     print_separated_list print_expr_lustre ", " exp_l;
-    print_string ")"
+    print_string ")"*)
   |PEL_when(e, id, e') ->
     print_expr_lustre e;
     print_string " when ";
@@ -231,10 +231,10 @@ let rec print_expr e =
     print_const c;
     print_string " fby ";
     print_expr e'
-  |PE_tuple(exp_l) ->
+(*  |PE_tuple(exp_l) ->
     print_string "(";
     print_separated_list print_expr ", " exp_l;
-    print_string ")"
+    print_string ")"*)
   |PE_when(e, id, id') ->
     print_expr e;
     print_string " when ";

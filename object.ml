@@ -92,7 +92,7 @@ let rec trans_expr env e =
   |PE_binop(op, e1, e2) -> OBJ_binop(op, trans_expr env e1, trans_expr env e2)
   |PE_app(id, e_l, id_reset) -> assert false (* in trans_eq *)
   |PE_fby(c, e1) -> assert false (* in trans_eq *)
-  |PE_tuple(e_l) -> assert false
+(*  |PE_tuple(e_l) -> assert false*)
   |PE_when(e1, enum_id, id) -> trans_expr env e1
   |PE_current(e1) -> trans_expr env e1
   |PE_merge(id, merge_l) -> assert false (* in trans_merge *)

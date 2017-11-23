@@ -201,10 +201,10 @@ let rec type_expr const_map ty_map env e vars eqs =
     with
       Not_found -> raise (Type_Error "FBY : constant is not a defined")
   end
-  |PEL_tuple e_l ->
+(*  |PEL_tuple e_l ->
     let e_l_t, vars, eqs = type_expr_l const_map ty_map env e_l vars eqs in
     let ty = Ttuple (List.map (fun e -> e.pexpr_ty) e_l_t) in
-    (mk_expr_from e (PE_tuple e_l_t) ty, vars, eqs)
+    (mk_expr_from e (PE_tuple e_l_t) ty, vars, eqs)*)
   |PEL_when (e1, enum_id, e2) -> begin
     let e1_t, vars, eqs = type_expr const_map ty_map env e1 vars eqs in
     let e2_t, vars, eqs = type_expr const_map ty_map env e2 vars eqs in
