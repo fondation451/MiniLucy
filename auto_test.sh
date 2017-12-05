@@ -295,7 +295,6 @@ for f in tests/syntax/good/*.$ext; do
   expected=tests/syntax/good//`basename $f .$ext`.lout
   input_f=tests/syntax/good/`basename $f .$ext`.lin
   max=`expr $max + 1`;
-  echo $input_f;
   if compile $f; then
     rm -f out
     score_comp=`expr $score_comp + 1`;
