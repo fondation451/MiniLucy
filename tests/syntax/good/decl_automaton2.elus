@@ -1,1 +1,1 @@
-automaton S0 -> do a = 1 | S1 -> let a = 1 in do b = a + 1
+let node test () = (a : int, b : int) where automaton S0 -> do a = 1 | S1 -> let a = 1 in do b = a + 1

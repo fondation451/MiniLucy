@@ -1,3 +1,3 @@
-match True with
+let node test () = (a : int, b : int) where match True with
   | True -> a = 1
   | False -> b = 5

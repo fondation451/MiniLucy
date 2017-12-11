@@ -361,19 +361,30 @@ test () {
   part6 $ext;
 }
 
-
 case $option in
-    "-v" )
+    "-v"    )
       verbose=1;;
-    *    )
-      verbose=0;;
+    "-lus"  )
+      test_lus=1
+      test_elus=0;;
+    "-elus" )
+      test_lus=0
+      test_elus=1;;
+    "-both" )
+      test_lus=1
+      test_elus=1;;
+    *       )
+      verbose=0
+      test_lus=1
+      test_elus=0;;
 esac
 
-test lus
+if [[ $test_lus != 0 ]]; then
+  test lus
+  echo
+fi
 
-echo
-echo
-
-#test elus
-
-#echo
+if [[ $test_elus != 0 ]]; then
+  test elus
+  echo
+fi

@@ -1,1 +1,1 @@
-a = 1 and b = 58942114
+let node test () = (a : int, b : int) where a = 1 and b = 58942114

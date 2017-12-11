@@ -13,46 +13,67 @@ Clément PASCUTTO <clement.pascutto@ens.fr
 *)
 
 open Format;;
+open Ast;;
+open Ast_type;;
 open East;;
+open Lustre_printer;;
 
-let print_separated_list print_fn sep l =
-  let rec aux = function
-    | [] -> ()
-    | [h] -> print_fn h;
-    | h::t -> print_fn h; print_string sep; aux t;
-  in
-  aux l
+let rec print_reg_typ t =
+  match t with
+  |Tint      -> print_string "int"
+  |Treal     -> print_string "real"
+  |Ttype id  -> print_string id
+  |Ttuple tu ->
+    print_string "(";
+    print_separated_list print_reg_typ ", " tu;
+    print_string ")";
+  |Tvar i ->
+    print_string "`a";
+    print_int i;
+  |Tcfun (ty1, ty2) ->
+    print_reg_typ ty1;
+    print_string "-0->";
+    print_reg_typ ty2;
+  |Tsfun (ty1, ty2) ->
+    print_reg_typ ty1;
+    print_string "-1->";
+    print_reg_typ ty2;
 ;;
 
-let print_id = print_string;;
+let print_typ t =
+  let rec print_typ_aux alpha t =
+    match t with
+    |Regular ty ->
+      if List.length alpha > 0 then begin
+        print_string "forall ";
+        print_separated_list (fun i -> print_string "`a"; print_int i)
+                             ", " alpha;
+        print_string "." end;
+      print_reg_typ ty;
+    |Scheme (i, ty) ->
+      print_typ_aux (i :: alpha) ty in
 
-let print_const c =
-  match c with
-  |Cint(i) -> print_int i
-  |Creal(f) -> print_float f
+  print_typ_aux [] t
 ;;
 
-let string_of_op o =
-  match o with
-  |Op_eq -> "="
-  |Op_neq -> "<>"
-  |Op_lt -> "<"
-  |Op_le -> "<="
-  |Op_gt -> ">"
-  |Op_ge -> ">="
-  |Op_add |Op_add_f -> "+"
-  |Op_sub |Op_sub_f -> "-"
-  |Op_mul |Op_mul_f -> "*"
-  |Op_div |Op_div_f -> "/"
-  |Op_mod -> "mod"
-  |Op_not -> "not"
-  |Op_and -> "and"
-  |Op_or -> "or"
-  |Op_impl -> "=>"
-;;
+let print_param p =
+  print_id p.param_id;
+  print_string " : ";
+  print_typ p.param_ty;;
+
+let print_type_decl ty_decl =
+  let (id,decl) = ty_decl in
+    print_string "type ";
+    print_id id;
+    if List.length decl > 0 then begin
+      print_string " = ";
+      print_separated_list print_id " + " decl;
+    end;
+    print_string ";";;
 
 let rec print_decl d =
   match d.pdecl_desc with
+  |PD_skip -> print_string "skip"
   |PD_and(d1, d2) ->
     print_decl d1;
     print_string ";\n";
@@ -143,10 +164,18 @@ and print_expr e =
   match e.pexpr_desc with
   |PE_const(c) -> print_const c
   |PE_ident(id) -> print_id id
-  |PE_op(op, exp_l) ->
+  |PE_uop(op, e) ->
+    print_string (string_of_uop op);
+    print_expr e;
+    print_string " ";
+  |PE_bop(op, e1, e2) ->
     print_string "(";
-    print_separated_list print_expr (" " ^ (string_of_op op) ^ " ") exp_l;
-    print_string ")"
+    print_expr e1;
+    print_string " ";
+    print_string (string_of_op op);
+    print_string " ";
+    print_expr e2;
+    print_string ")";
   |PE_if(e, e', e'') ->
     print_string "if ";
     print_expr e;
@@ -191,11 +220,6 @@ and print_expr e =
   |PE_last(id) ->
     print_string "last ";
     print_id id
-  |PE_let_in(decl, expr) ->
-    print_string "let ";
-    print_decl decl;
-    print_string " in ";
-    print_expr expr
 and print_equation e =
   (match e.peq_patt.ppatt_desc with
      |PP_ident(id) -> print_id id
@@ -204,8 +228,35 @@ and print_equation e =
   print_expr e.peq_expr
 ;;
 
-let print_elustre f =
+let print_node n =
+  print_string "let node ";
+  print_id n.pn_name;
+  print_string " (";
+  print_separated_list print_param ", " n.pn_input;
+  print_string ") ";
+  print_string "= (";
+  print_separated_list print_param ", " n.pn_output;
+  print_string ")";
+  if List.length n.pn_local > 0 then begin
+    print_string "\nwith ";
+    print_separated_list print_param ", " n.pn_local;
+  end;
+  print_string " where\n";
   open_hovbox 2;
-    print_decl f;
+    print_decl n.pn_decl;
+    print_string ";\n";
+  close_box ();
+;;
+
+let print_elustre f =
+  let (type_decls, nodes) = f in
+  open_hovbox 2;
+    print_string "-- Enum type declarations\n\n";
+    print_separated_list print_type_decl "\n" (IdentMap.bindings type_decls);
+    print_newline ();
+    print_newline ();
+    print_newline ();
+    print_string "-- Nodes declarations\n\n";
+    print_separated_list print_node "\n\n" nodes;
   close_box ()
 ;;

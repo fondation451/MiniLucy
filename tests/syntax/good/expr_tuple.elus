@@ -1,1 +1,1 @@
-a = (a,b,(c,3))
+let node test () = (a : int, b : int) where a = (a,b,(c,3))

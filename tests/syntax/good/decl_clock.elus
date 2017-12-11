@@ -1,1 +1,1 @@
-clock clk = 1
+let node test () = (a : int, b : int) where clock clk = 1

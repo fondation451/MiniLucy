@@ -1,2 +1,2 @@
-automaton
+let node test () = (a : int, b : int) where automaton
   | S0 -> let a = 1 in do b = 1

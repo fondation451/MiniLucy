@@ -75,27 +75,64 @@ let () =
     exit 1
   end;
 
+  print_separation ();
+
   let f_name = Filename.remove_extension !input_file in
 
   let f = open_in !input_file in
   let buf = Lexing.from_channel f in
 
-  if (Filename.check_suffix !input_file ".lus") then begin
-    try
-      (* PARSING *)
-      let p_lustre = Parser.file Lexer.token buf in
+  let p_lustre =
+    if (Filename.check_suffix !input_file ".lus") then begin
+      try
+        (* PARSING LUS *)
+        Parser.file Lexer.token buf
+      with
+      |Lexer.Lexical_error(str) ->
+        (localisation (Lexing.lexeme_start_p buf);
+        eprintf "Lexing error@.";
+        Printf.printf "%s\n" str;
+        exit 1)
+    end else begin
+      (* PARSING ELUS *)
+
+      let p_elustre = Eparser.file Elexer.token buf in
       close_in f;
 
       if !verbose then begin
-        print_string "    (SYNTATIC ANALYSIS)\n";
-        Lustre_printer.print_lustre p_lustre;
+        print_string "    (SYNTATIC ANALYSIS ELUS)\n";
+        Elustre_printer.print_elustre p_elustre;
         print_separation ()
       end;
 
-      if !parse_only then begin
-        exit 0
+      if !parse_only then exit 0;
+
+      (* TRANSLATION TO AST *)
+
+      let ast_lustre = Easttoast.translate_file p_elustre in
+
+      if !verbose then begin
+        print_string "    (TRANSLATION TO LUS)\n";
+        Lustre_printer.print_lustre ast_lustre;
+        print_separation ()
       end;
 
+      ast_lustre
+    end in
+
+    close_in f;
+
+    if !verbose then begin
+      print_string "    (SYNTATIC ANALYSIS)\n";
+      Lustre_printer.print_lustre p_lustre;
+      print_separation ()
+    end;
+
+    if !parse_only then begin
+      exit 0
+    end;
+
+    try
       (* TYPING *)
       let p = Type.type_file p_lustre in
 
@@ -167,11 +204,6 @@ let () =
 
       exit 0;
     with
-      |Lexer.Lexical_error(str) ->
-        (localisation (Lexing.lexeme_start_p buf);
-        eprintf "Lexing error@.";
-        Printf.printf "%s\n" str;
-        exit 1)
       |Parser.Error ->
         localisation (Lexing.lexeme_start_p buf);
     	  eprintf "Syntax error@.";
@@ -188,26 +220,5 @@ let () =
       |To_c.No_Main ->
         eprintf "C Generation error@.";
         Printf.printf "No Main\n";
-        exit 1
-  end else begin
-    try
-      let p_elustre = Eparser.file Elexer.token buf in
-      close_in f;
-
-      if !parse_only then begin
-        Elustre_printer.print_elustre p_elustre;
-      end;
-
-      exit 0;
-    with
-      |Elexer.Lexical_error(str) ->
-        (localisation (Lexing.lexeme_start_p buf);
-        eprintf "Lexing error@.";
-        Printf.printf "%s\n" str;
-        exit 1)
-      |Eparser.Error ->
-        localisation (Lexing.lexeme_start_p buf);
-        eprintf "Syntax error@.";
-        exit 1
-  end
+        exit 1;
 ;;

@@ -16,6 +16,8 @@ Clément PASCUTTO <clement.pascutto@ens.fr>
 
   open Lexing;;
   open Eparser;;
+  open Ast;;
+  open Ast_type;;
   open East;;
 
   exception Lexical_error of string;;
@@ -23,8 +25,9 @@ Clément PASCUTTO <clement.pascutto@ens.fr>
   let id_or_keyword =
     let h = Hashtbl.create 17 in
     List.iter (fun (s,k) -> Hashtbl.add h s k) [
+      "node", NODE;
+
       "and", AND;
-      "div", DIV;
       "else", ELSE;
       "fby", FBY;
       "if", IF;
@@ -35,6 +38,8 @@ Clément PASCUTTO <clement.pascutto@ens.fr>
       "or", OR;
       "then", THEN;
       "when", WHEN;
+      "where", WHERE;
+      "type", TYPE;
 
       "clock", CLK;
       "last", LAST;
@@ -115,6 +120,8 @@ rule token = parse
     {COMMA}
   |"|"
     {VBAR}
+  |":"
+    {COLON}
   |_
     {raise (Lexical_error (lexeme lexbuf))}
   |eof

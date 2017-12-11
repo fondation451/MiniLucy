@@ -1,1 +1,1 @@
-a = b
+let node test () = (a : int, b : int) where a = b

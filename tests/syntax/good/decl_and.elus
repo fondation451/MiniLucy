@@ -1,1 +1,2 @@
-a = 1 and b = 2; c = 3
+let node test (c : int) = (a : int, b : int) with d : int, e : lol where
+  a = 1 and b = 2; c = 3

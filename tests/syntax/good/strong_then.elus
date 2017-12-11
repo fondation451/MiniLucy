@@ -1,2 +1,2 @@
-automaton
+let node test () = (a : int, b : int) where automaton
   | S0 -> do b = 1 unless 3 then S1

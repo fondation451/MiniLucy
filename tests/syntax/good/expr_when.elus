@@ -1,1 +1,1 @@
-a = 1 + 1 when True(3)
+let node test () = (a : int, b : int) where a = 1 + 1 when True(3)
