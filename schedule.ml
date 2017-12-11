@@ -17,11 +17,24 @@ open Ast;;
 
 exception Schedule_Error of string;;
 
-let left_expr e =
+let rec remove_fby eqs =
+  let fby_out = ref [] in
+  let eqs_out = List.fold_left
+    (fun out eq ->
+      match eq.peq_expr.pexpr_desc with
+      |PE_fby(_) -> fby_out := eq::(!fby_out); out
+      |_ -> eq::out)
+    []
+    eqs
+  in
+  eqs_out, fby_out
+;;
+
+let left_expr e var_in =
   let rec left_expr_rec e out =
     match e.pexpr_desc with
     |PE_const(c) -> out
-    |PE_ident(id) -> IdentSet.add id out
+    |PE_ident(id) -> if IdentSet.mem id var_in then out else IdentSet.add id out
     |PE_op(op, e1) -> left_expr_rec e1 out
     |PE_binop(op, e1, e2) -> left_expr_rec e1 (left_expr_rec e2 out)
     |PE_app(id, e_l, id_reset) -> List.fold_left (fun out e1 -> left_expr_rec e1 out) (IdentSet.add id_reset out) e_l
@@ -53,16 +66,21 @@ let vars_f eqs =
   IdentSet.elements out
 ;;
 
-let pick_node degree_m =
-  let rec loop i =
-    if i < Array.length degree_m then
-      if degree_m.(i) = 0 then
-        i
+let pick_node degree_m dep_m =
+  let candidats = ref [] in
+  Array.iteri (fun i d -> if d = 0 then candidats := i::(!candidats)) degree_m;
+  let rec find_min l dep_out out =
+    match l with
+    |[] -> out
+    |h::t ->
+      if dep_out > dep_m.(h) then
+        find_min t dep_m.(h) h
       else
-        loop (i+1)
-    else
-      -1
-  in loop 0
+        find_min t dep_out out
+  in
+  match !candidats with
+  |[] -> -1
+  |h::t -> find_min t dep_m.(h) h
 ;;
 
 let decrease_degree n g degree_m =
@@ -70,9 +88,9 @@ let decrease_degree n g degree_m =
   List.iter (fun i -> degree_m.(i) <- degree_m.(i) - 1) n_l
 ;;
 
-let topological g degree_m =
+let topological g degree_m dep_m =
   let rec loop out =
-    let node = pick_node degree_m in
+    let node = pick_node degree_m dep_m in
     if node < 0 then
       out
     else begin
@@ -92,14 +110,14 @@ let mk_var_map eqs =
   in loop 0 (vars_f eqs) IdentMap.empty
 ;;
 
-let mk_g eqs =
+let mk_g eqs var_in =
   let var_map = mk_var_map eqs in
   let nb_node = List.length (IdentMap.bindings var_map) in
   let g = Array.make nb_node [] in
   let degree_m = Array.make nb_node 0 in
   List.iter
     (fun eq ->
-      let left_eq = left_expr eq.peq_expr in
+      let left_eq = left_expr eq.peq_expr var_in in
       let fill_g id =
         let depends =
           List.filter
@@ -125,7 +143,7 @@ let mk_g eqs =
       match eq.peq_patt.ppatt_desc with
       |PP_ident(id) -> fill_g id
       |PP_tuple(id_l) -> List.iter fill_g id_l) eqs;
-  var_map, g, degree_m
+  var_map, g, degree_m, Array.copy degree_m
 ;;
 
 let reverse_map map =
@@ -185,8 +203,8 @@ let delay_fby eq_l =
   in loop eq_l [] []
 ;;
 
-let schedule_eqs eqs =
-  let var_map, g, degree_m = mk_g eqs in
+let schedule_eqs eqs var_in =
+  let var_map, g, degree_m, dep_m = mk_g eqs var_in in
 (*  print_endline "var_map :";
   IdentMap.iter (fun id ind -> print_string (id ^ " : " ^ (string_of_int ind) ^ ", ")) var_map;
   print_newline ();
@@ -194,7 +212,7 @@ let schedule_eqs eqs =
   Array.iteri (fun i deg -> print_string ("(" ^ (string_of_int i) ^ ", " ^ (string_of_int deg) ^ "), ")) degree_m;
   print_newline ();*)
   let id_map = reverse_map var_map in
-  let ordered_ind_rev = topological g degree_m in
+  let ordered_ind_rev = topological g degree_m dep_m in
 (*  print_endline "degree_m : (after)";
   Array.iteri (fun i deg -> print_string ("(" ^ (string_of_int i) ^ ", " ^ (string_of_int deg) ^ "), ")) degree_m;
   print_newline ();
@@ -220,5 +238,9 @@ let schedule_eqs eqs =
 
 let schedule_file f =
   let typemap, node_l = f in
-  typemap, List.map (fun node -> {node with pn_equs = schedule_eqs node.pn_equs}) node_l
+  typemap, List.map
+             (fun node ->
+               let var_in = List.fold_left (fun out par -> IdentSet.add par.param_id out) IdentSet.empty node.pn_input in
+               {node with pn_equs = schedule_eqs node.pn_equs var_in})
+             node_l
 ;;
