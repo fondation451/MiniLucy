@@ -1,1 +1,0 @@
-let node test () = (a : int, b : int) where reset a = 1 every 3

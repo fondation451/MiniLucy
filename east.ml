@@ -15,20 +15,25 @@ Clément PASCUTTO <clement.pascutto@ens.fr>
 open Ast_type;;
 open Ast;;
 
-type enum_ty = string list
+type enum_ty = string list;;
 
-type reg_ty =
+type elustre_ty =
   |Tint
   |Treal
   |Ttype of ident
-  |Ttuple of reg_ty list
-  |Tvar of int
-  |Tcfun of reg_ty * reg_ty
-  |Tsfun of reg_ty * reg_ty;;
+  |Tfun of elustre_ty * elustre_ty;;
 
-type elustre_ty =
-  |Regular of reg_ty
-  |Scheme of int * elustre_ty;;
+let none_type = Ttype "__None__";; (* dummy type that means "not typed yet" *)
+let bool_type   = Ttype "bool";;
+let const_true  = Cenum (lustre_bool_true);;
+let const_false = Cenum (lustre_bool_false);;
+
+type ident_ty = ident * elustre_ty;;
+
+module IdentTySet = Set.Make(struct
+  type t = ident_ty;;
+  let compare = fun (a, b) (c, d) -> String.compare a c;;
+end);;
 
 type param = {
   param_id : ident;
@@ -48,11 +53,11 @@ and p_decl_desc =
   |PD_skip
   |PD_and of p_decl * p_decl
   |PD_eq of p_equation
-  |PD_clk of ident * p_expr
+  |PD_clk of ident_ty * p_expr
   |PD_let_in of p_decl * p_decl
-  |PD_match of p_expr * (ident * p_decl) list
+  |PD_match of p_expr * (ident_ty * p_decl) list
   |PD_reset of p_decl * p_expr
-  |PD_automaton of (ident * p_shared_var * p_strong_cond) list
+  |PD_automaton of (ident_ty * p_shared_var * p_strong_cond) list
 and p_expr = {
   pexpr_desc : p_expr_desc;
   pexpr_ty : elustre_ty;
@@ -60,27 +65,26 @@ and p_expr = {
 }
 and p_expr_desc =
   |PE_const of const
-  |PE_ident of ident
+  |PE_ident of ident_ty
   |PE_uop of uop * p_expr
   |PE_bop of op * p_expr * p_expr
   |PE_if of p_expr * p_expr * p_expr
-  |PE_app of ident * p_expr list
-  |PE_arrow of p_expr * p_expr
+  |PE_app of ident_ty * p_expr list * p_expr
+  |PE_fby of const * p_expr
   |PE_pre of p_expr
-  |PE_tuple of p_expr list
   |PE_when of p_expr * ident * p_expr
-  |PE_merge of p_expr * (ident * p_expr) list
-  |PE_last of ident
+  |PE_merge of p_expr * (ident_ty * p_expr) list
+  |PE_last of ident_ty
 and p_shared_var =
   |PSV_let of p_decl * p_shared_var
   |PSV_do of p_decl * p_weak_cond
 and p_strong_cond =
-  |PSC_unless_then of p_expr * ident * p_strong_cond
-  |PSC_unless_cont of p_expr * ident * p_strong_cond
+  |PSC_unless_then of p_expr * ident_ty * p_strong_cond
+  |PSC_unless_cont of p_expr * ident_ty * p_strong_cond
   |PSC_epsilon
 and p_weak_cond =
-  |PWC_until_then of p_expr * ident * p_weak_cond
-  |PWC_until_cont of p_expr * ident * p_weak_cond
+  |PWC_until_then of p_expr * ident_ty * p_weak_cond
+  |PWC_until_cont of p_expr * ident_ty * p_weak_cond
   |PWC_epsilon
 ;;
 

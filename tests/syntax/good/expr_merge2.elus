@@ -1,1 +1,0 @@
-let node test () = (a : int, b : int) where b = merge c True -> 1 | False -> 0

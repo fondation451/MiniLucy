@@ -101,11 +101,22 @@ let () =
 
       if !verbose then begin
         print_string "    (SYNTATIC ANALYSIS ELUS)\n";
-        Elustre_printer.print_elustre p_elustre;
+        Elustre_printer.print_elustre false p_elustre;
         print_separation ()
       end;
 
       if !parse_only then exit 0;
+
+      (* TYPING *)
+      let p = Etype.type_file p_elustre in
+
+      if !verbose then begin
+        print_string "    (TYPING ELUS)\n";
+        Elustre_printer.print_elustre true p;
+        print_separation ()
+      end;
+
+      if !type_only then exit 0;
 
       (* TRANSLATION TO AST *)
 

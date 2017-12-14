@@ -1,2 +1,0 @@
-let node test () = (a : int, b : int) where automaton
-  | S0 -> do b = 1 until 3 then S1

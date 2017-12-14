@@ -1,0 +1,8 @@
+type aut = S1 + S2;
+
+let node two (x : bool) = (o : int) where
+  automaton
+    | S1 -> do o = 0 -> last o + 1 until x continue S2
+    | S2 -> do o = last o - 1 until x continue S1
+  end
+tel

@@ -32,6 +32,7 @@ Clément PASCUTTO <clement.pascutto@ens.fr>
       "fby", FBY;
       "if", IF;
       "let", LET;
+      "tel", TEL;
       "merge", MERGE;
       "mod", MOD;
       "not", NOT;
@@ -40,6 +41,7 @@ Clément PASCUTTO <clement.pascutto@ens.fr>
       "when", WHEN;
       "where", WHERE;
       "type", TYPE;
+      "pre", PRE;
 
       "clock", CLK;
       "last", LAST;
@@ -47,6 +49,7 @@ Clément PASCUTTO <clement.pascutto@ens.fr>
       "unless", UNLESS;
       "in", IN;
       "automaton", AUTOMATON;
+      "end", END;
       "continue", CONTINUE;
       "do", DO;
       "with", WITH;
