@@ -1,2 +1,0 @@
-automaton
-  | S0 -> do b = 1

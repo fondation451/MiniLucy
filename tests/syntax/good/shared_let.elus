@@ -1,2 +1,0 @@
-automaton
-  | S0 -> let a = 1 in do b = 1

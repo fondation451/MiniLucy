@@ -14,61 +14,55 @@ Cl�ment PASCUTTO <clement.pascutto@ens.fr>
 
 %{
 
+  open Ast;;
+  open Ast_type;;
   open East;;
   open Parsing;;
 
-  let loc () = symbol_start_pos (), symbol_end_pos ();;
-  let mk_expr e = {pexpr_desc = e; pexpr_clk = None; pexpr_loc = loc ()};;
-  let mk_decl d = {pdecl_desc = d; pdecl_loc = loc ()}
-  let mk_patt p = {ppatt_desc = p; ppatt_loc = loc ()};;
-  let mk_param id ty ck = {param_id = id; param_ty = ty; param_ck = ck;};;
+  let ty_map = Hashtbl.create 5;;
+  let _ =
+    List.iter (fun (s,k) -> Hashtbl.add ty_map s k) [
+      "int", Tint;
+      "real", Treal;
+    ];;
+
+  let ty_env = Hashtbl.create 100;;
+  let add_env id ty = Hashtbl.add ty_env id ty;;
+  let clear_env () = Hashtbl.clear ty_env;;
+
+  let const_env = Hashtbl.create 100;;
+  let add_const c ty = Hashtbl.add const_env c ty;;
+  let _ =
+    List.iter (fun (s,k) -> Hashtbl.add const_env s k) [
+      "True", bool_type;
+      "False", bool_type;
+    ];;
+
+  let loc ()         = symbol_start_pos (), symbol_end_pos ();;
+  let mk_ty ty       = try Hashtbl.find ty_map ty with Not_found -> Ttype ty;;
+  let mk_id id       = (id, try Hashtbl.find ty_env id with |Not_found ->
+                            try Hashtbl.find const_env id with |Not_found -> none_type);;
+  let mk_expr e      = {pexpr_desc = e; pexpr_ty = none_type; pexpr_loc = loc ()};;
+  let mk_decl d      = {pdecl_desc = d; pdecl_loc = loc ()}
+  let mk_patt p      = {ppatt_desc = p; ppatt_loc = loc ()};;
+  let mk_param id ty = {param_id = id; param_ty = ty; param_ck = CK_base};;
+    (* Dummy values for clk and ty, they will be set during typing and clocking*)
 
 %}
 
-%token AND
-%token ARROW
-%token COMMA
-%token <East.op> COMP
+%token <Ast_type.op> COMP
 %token <int> CONST_INT
 %token <float> CONST_REAL
-%token DIV
-%token ELSE
-%token EOF
-%token EQUAL
-%token FBY
-%token NEQ
 %token <string> IDENT
-%token IF
-%token IMPL
-%token LET
-%token LPAREN
-%token MINUS
-%token MERGE
-%token MOD
-%token NOT
-%token OR
-%token PLUS
-%token RPAREN
-%token SEMICOL
-%token SLASH
-%token STAR
-%token THEN
-%token WHEN
 
+%token NODE
+%token COMMA ARROW IMPL SEMICOL SLASH VBAR COLON
+%token IF THEN ELSE LET IN FBY MERGE WHEN LAST UNTIL UNLESS AUTOMATON EVERY
+%token CONTINUE DO WITH RESET MATCH WHERE TYPE PRE END TEL
+%token LPAREN RPAREN
 %token CLK
-%token LAST
-%token UNTIL
-%token UNLESS
-%token IN
-%token AUTOMATON
-%token EVERY
-%token VBAR
-%token CONTINUE
-%token DO
-%token WITH
-%token RESET
-%token MATCH
-
+%token EQUAL NEQ PLUS MINUS STAR MOD AND NOT OR
+%token EOF
 
 %nonassoc ELSE
 %right ARROW
@@ -77,7 +71,7 @@ Cl�ment PASCUTTO <clement.pascutto@ens.fr>
 %left AND
 %left COMP EQUAL NEQ                          /* < <= > >= <> = <> */
 %left PLUS MINUS                              /* + -  */
-%left STAR SLASH DIV MOD                      /* * /  mod */
+%left STAR SLASH MOD                      /* * /  mod */
 %nonassoc NOT                                 /* not */
 
 /* Point d'entr�e */
@@ -87,27 +81,101 @@ Cl�ment PASCUTTO <clement.pascutto@ens.fr>
 
 %%
 
-file: decl EOF {$1}
+file: enum_types node_decs EOF {($1,$2)}
+;
+
+enum_types:
+|/* empty */                  {IdentMap.add "bool" ["True"; "False"]
+                                            IdentMap.empty}
+|enum_type SEMICOL enum_types {let (id,cons) = $1 in
+                               IdentMap.add id cons $3}
+;
+
+enum_type:
+|TYPE IDENT {($2, [])}
+|TYPE IDENT EQUAL separated_list(PLUS, IDENT) {
+  let _ = List.iter (fun id -> add_const id (Ttype $2)) $4 in
+   ($2, $4)
+  }
+;
+
+node_decs:
+|/* empty */    {[]}
+|node node_decs {let _ = clear_env () in $1 :: $2}
+;
+
+node:
+|LET NODE IDENT LPAREN in_params RPAREN
+ EQUAL LPAREN param_list RPAREN WHERE
+ decl TEL
+  {{pn_name = $3;
+    pn_input = $5;
+    pn_output = $9;
+    pn_local = [];
+    pn_decl = $12;
+    pn_loc = loc();}}
+|LET NODE IDENT LPAREN in_params RPAREN
+ EQUAL LPAREN param_list RPAREN
+ WITH local_params WHERE
+ decl TEL
+  {{pn_name = $3;
+    pn_input = $5;
+    pn_output = $9;
+    pn_local = $12;
+    pn_decl = $14;
+    pn_loc = loc();}}
+;
+
+in_params:
+|/* empty */     {[]}
+|param_list {$1}
+;
+
+local_params:
+|/* empty */     {[]}
+|param_list {$1}
+;
+
+param_list:
+|param                  {$1}
+|param COMMA param_list {$1 @ $3}
+;
+
+param:
+|ident_space_list COLON typ {List.map (
+    fun id -> let _ = add_env id $3 in mk_param id $3
+    ) $1}
+;
+
+typ:
+|IDENT   {mk_ty $1}
 ;
 
 decl:
-|decl AND decl {mk_decl (PD_and($1, $3))}
+|/* empty */ {mk_decl PD_skip}
+|LPAREN decl RPAREN {$2}
+|decl SEMICOL {$1}
 |decl SEMICOL decl {mk_decl (PD_and($1, $3))}
 |pattern EQUAL expr {mk_decl (PD_eq({peq_patt = $1; peq_expr = $3}))}
-|CLK IDENT EQUAL expr {mk_decl (PD_clk($2, $4))}
+|CLK IDENT EQUAL expr {mk_decl (PD_clk(mk_id $2, $4))}
+|CLK IDENT COLON typ EQUAL expr {mk_decl (PD_clk(($2, $4), $6))}
 |LET decl IN decl {mk_decl (PD_let_in($2, $4))}
 |MATCH expr WITH match_case_list {mk_decl (PD_match($2, $4))}
 |RESET decl EVERY expr {mk_decl (PD_reset($2, $4))}
-|AUTOMATON automaton_case_list {mk_decl (PD_automaton($2))}
+|AUTOMATON automaton_case_list END {mk_decl (PD_automaton($2))}
 ;
 
 pattern:
 |IDENT {mk_patt (PP_ident $1)}
-|LPAREN ident_comma_list RPAREN {mk_patt (PP_tuple($2))}
 ;
 
 ident_comma_list:
 |separated_nonempty_list(COMMA, IDENT) {$1}
+;
+
+ident_space_list:
+|IDENT                  {[$1]}
+|IDENT ident_space_list {$1 :: $2}
 ;
 
 match_case_list:
@@ -116,7 +184,7 @@ match_case_list:
 ;
 
 match_case:
-|IDENT ARROW decl {($1, $3)}
+|IDENT ARROW decl {(mk_id $1, $3)}
 ;
 
 automaton_case_list:
@@ -125,7 +193,7 @@ automaton_case_list:
 ;
 
 automaton_case:
-|IDENT ARROW shared_var strong_condition {($1, $3, $4)}
+|IDENT ARROW shared_var strong_condition {(mk_id $1, $3, $4)}
 ;
 
 shared_var:
@@ -135,43 +203,48 @@ shared_var:
 
 weak_condition:
 |/*empty*/ {PWC_epsilon}
-|UNTIL expr THEN IDENT weak_condition {PWC_until_then($2, $4, $5)}
-|UNTIL expr CONTINUE IDENT weak_condition {PWC_until_cont($2, $4, $5)}
+|UNTIL expr THEN IDENT weak_condition {PWC_until_then($2, mk_id $4, $5)}
+|UNTIL expr CONTINUE IDENT weak_condition {PWC_until_cont($2, mk_id $4, $5)}
 ;
 
 strong_condition:
 |/*empty*/ {PSC_epsilon}
-|UNLESS expr THEN IDENT strong_condition {PSC_unless_then($2, $4, $5)}
-|UNLESS expr CONTINUE IDENT strong_condition {PSC_unless_cont($2, $4, $5)}
+|UNLESS expr THEN IDENT strong_condition {PSC_unless_then($2, mk_id $4, $5)}
+|UNLESS expr CONTINUE IDENT strong_condition {PSC_unless_cont($2, mk_id $4, $5)}
 ;
 
 expr:
 |LPAREN expr RPAREN {$2}
 |const {$1}
-|IDENT {mk_expr (PE_ident $1)}
-|IDENT LPAREN expr_comma_list RPAREN {mk_expr (PE_app ($1, $3))}
+|IDENT {mk_expr (PE_ident (mk_id $1))}
+|IDENT LPAREN expr_comma_list RPAREN {mk_expr (PE_app (mk_id $1, $3, mk_expr (PE_const (Cenum "False"))))}
+|IDENT LPAREN expr_comma_list RPAREN EVERY expr {mk_expr (PE_app (mk_id $1, $3, $6))}
 |IF expr THEN expr ELSE expr {mk_expr (PE_if ($2, $4, $6))}
-|expr PLUS expr {mk_expr (PE_op (Op_add, [$1; $3]))}
-|expr MINUS expr {mk_expr (PE_op (Op_sub, [$1; $3]))}
-|expr STAR expr {mk_expr (PE_op (Op_mul, [$1; $3]))}
-|expr SLASH expr {mk_expr (PE_op (Op_div, [$1; $3]))}
-|expr DIV expr {mk_expr (PE_op (Op_div, [$1; $3]))}
-|expr MOD expr {mk_expr (PE_op (Op_mod, [$1; $3]))}
-|expr COMP expr {mk_expr (PE_op ($2, [$1; $3]))}
-|expr EQUAL expr {mk_expr (PE_op (Op_eq, [$1; $3]))}
-|expr NEQ expr {mk_expr (PE_op (Op_neq, [$1; $3]))}
-|expr AND expr {mk_expr (PE_op (Op_and, [$1; $3]))}
-|expr OR expr {mk_expr (PE_op (Op_or, [$1; $3]))}
-|expr IMPL expr {mk_expr (PE_op (Op_impl, [$1; $3]))}
-|expr ARROW expr {mk_expr (PE_arrow ($1, $3))}
-|expr FBY expr {mk_expr (PE_arrow ($1, mk_expr (PE_pre ($3))))}
-|MINUS expr /* %prec uminus */ {mk_expr (PE_op (Op_sub, [$2]))}
-|NOT expr {mk_expr (PE_op (Op_not, [$2]))}
-|LPAREN expr_comma_list RPAREN {mk_expr (PE_tuple $2)}
+|expr PLUS expr {mk_expr (PE_bop (Op_add, $1, $3))}
+|expr MINUS expr {mk_expr (PE_bop (Op_sub, $1, $3))}
+|expr STAR expr {mk_expr (PE_bop (Op_mul, $1, $3))}
+|expr SLASH expr {mk_expr (PE_bop (Op_div, $1, $3))}
+|expr MOD expr {mk_expr (PE_bop (Op_mod, $1, $3))}
+|expr COMP expr {mk_expr (PE_bop ($2, $1, $3))}
+|expr EQUAL expr {mk_expr (PE_bop (Op_eq, $1, $3))}
+|expr NEQ expr {mk_expr (PE_bop (Op_neq, $1, $3))}
+|expr AND expr {mk_expr (PE_bop (Op_and, $1, $3))}
+|expr OR expr {mk_expr (PE_bop (Op_or, $1, $3))}
+|expr IMPL expr {mk_expr (PE_bop (Op_impl, $1, $3))}
+|expr ARROW expr {mk_expr (PE_if (mk_expr (PE_fby (Cenum "True", mk_expr (PE_const (Cenum "False")))), $1, $3))}
+|const_fby FBY expr {mk_expr (PE_fby ($1, $3))}
+|PRE expr {mk_expr (PE_pre ($2))}
+|MINUS expr /* %prec uminus */ {mk_expr (PE_uop (UOp_minus, $2))}
+|NOT expr {mk_expr (PE_uop (UOp_not, $2))}
 |expr WHEN IDENT LPAREN expr RPAREN {mk_expr (PE_when ($1, $3, $5))}
-|LAST IDENT {mk_expr (PE_last($2))}
-|LET decl IN expr {mk_expr (PE_let_in($2, $4))}
+|LAST IDENT {mk_expr (PE_last(mk_id $2))}
 |MERGE expr merge_case_list {mk_expr (PE_merge ($2, $3))}
+;
+
+const_fby:
+|CONST_INT {Cint $1}
+|CONST_REAL {Creal $1}
+|IDENT {Cenum $1}
 ;
 
 merge_case_list:
@@ -180,7 +253,7 @@ merge_case_list:
 ;
 
 merge_case:
-|id = IDENT; ARROW; e = expr {(id, e)}
+|IDENT ARROW expr {(mk_id $1, $3)}
 ;
 
 const:

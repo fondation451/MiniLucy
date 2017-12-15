@@ -3,6 +3,10 @@
 *.cmo
 *.automaton
 *.conflicts
+eparser.ml
+parser.ml
+elexer.ml
+lexer.ml
 minilucy
 
 # Vim files

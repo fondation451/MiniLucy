@@ -1,0 +1,36 @@
+type aut1 = CHRONO;
+type aut2 = STOP + START;
+type aut3 = TIME + LAP;
+
+let node chrono (StSt : bool, Rst : bool) = (disp_1 : int, disp_2 : int)
+  with s m : int, run : bool where
+  automaton
+    | CHRONO ->
+      do automaton
+        | STOP ->
+          do s = 0 -> last s;
+             m = 0 -> last m;
+             run = False
+          unless StSt continue START
+        | START ->
+          let d = 0 -> (pre d + 1) mod 100 in
+            do s = if d < pre d
+                   then (last s + 1) mod 60
+                   else last s;
+               m = if s < last s
+                   then (last m + 1) mod 60
+                   else last m;
+               run = True
+          unless StSt continue STOP
+    end;
+    until Rst and not run then CHRONO
+  end;
+  automaton
+    | TIME ->
+      do disp_1 = s;
+         disp_2 = m
+      until Rst and run then LAP
+    | LAP ->
+      do until Rst then TIME
+  end
+tel
