@@ -80,22 +80,36 @@ let assign_type_e ty e =
 let rec type_uop op e =
   let ty =
     match op with
-    |UOp_not   -> bool_type
-    |UOp_minus -> if ty_equal Treal e.pexpr_ty then Treal
-                  else Tint in
+    |UOp_not     -> bool_type
+    |UOp_minus   -> if ty_equal Tint  e.pexpr_ty then Tint
+                    else raise (TypingError (String.concat " " [
+                      "Type"; Elustre_printer.str_of_elustre_ty false e.pexpr_ty;
+                      "is not compatible with int"
+                    ]))
+    |UOp_minus_f -> if ty_equal Treal e.pexpr_ty then Treal
+                    else raise (TypingError (String.concat " " [
+                      "Type"; Elustre_printer.str_of_elustre_ty false e.pexpr_ty;
+                      "is not compatible with real"
+                    ])) in
   ty, PE_uop (op, e)
 and type_bop op e1 e2 =
   let ty =
     match op with
     |Op_add |Op_sub |Op_mul |Op_div |Op_mod ->
-      if ty_equal_none Treal e1.pexpr_ty
-      && ty_equal_none Treal e2.pexpr_ty then Treal
-      else if ty_equal_none Tint e1.pexpr_ty
-           && ty_equal_none Tint e2.pexpr_ty then Tint
+      if ty_equal_none Tint e1.pexpr_ty
+      && ty_equal_none Tint e2.pexpr_ty then Tint
       else raise (TypingError (String.concat " " [
         "Types"; Elustre_printer.str_of_elustre_ty false e1.pexpr_ty; "and";
                  Elustre_printer.str_of_elustre_ty false e2.pexpr_ty; "are not";
-        "compatible with int or real"
+        "compatible with int"
+        ]))
+    |Op_add_f |Op_sub_f |Op_mul_f |Op_div_f ->
+      if ty_equal_none Treal e1.pexpr_ty
+      && ty_equal_none Treal e2.pexpr_ty then Treal
+      else raise (TypingError (String.concat " " [
+        "Types"; Elustre_printer.str_of_elustre_ty false e1.pexpr_ty; "and";
+                 Elustre_printer.str_of_elustre_ty false e2.pexpr_ty; "are not";
+        "compatible with real"
         ]))
     |Op_eq |Op_neq |Op_lt |Op_le |Op_gt |Op_ge ->
     if ty_equal_none Treal e1.pexpr_ty
