@@ -551,8 +551,8 @@ let cAutomaton type_decls cenv vars id_psv_psc_l =
   let pnr        = (pnr_name, bool_type, s_ck) in
   let pns_s      = (pns_s_name, s_ty, s_ck) in
   let pns_r      = (pns_r_name, bool_type, s_ck) in
-  let s_ns       = (s_nr_name, s_ty, s_ck) in
-  let s_nr       = (s_ns_name, bool_type, s_ck) in
+  let s_ns       = (s_ns_name, s_ty, s_ck) in
+  let s_nr       = (s_nr_name, bool_type, s_ck) in
   let pns_loc    = mk_param cenv pns_name s_ty s_ck in
   let pnr_loc    = mk_param cenv pnr_name bool_type s_ck in
   let pns_s_loc  = mk_param cenv pns_s_name s_ty s_ck in
@@ -692,21 +692,26 @@ and translate_expr type_decls cenv vars e =
       let (decl, vars, e) = translate_expr type_decls cenv vars e in
       (decl, vars, Ast_lustre.PEL_fby(c, e))
     |East.PE_when(e1_, id, e2_) ->
-      let new_name = find_fresh "when_expr" vars in
-      let new_ck   = CKon (e2_.pexpr_ck, id, CKid new_name) in
-      let new_id   = (new_name, e2_.pexpr_ty, new_ck) in
-      let new_e2 = mk_expr (PE_ident new_id) e2_.pexpr_ty new_ck in
-      let (decl1, vars, e1) = translate_expr type_decls cenv vars e1_ in
-      let (decl2, vars, e2) = translate_expr type_decls cenv vars new_e2 in
-      let new_param = mk_param cenv new_name e2_.pexpr_ty new_ck in
-      let new_decl = {
-        peq_lustre_patt = {
-          ppatt_desc = PP_ident new_name;
-          ppatt_loc  = Lexing.dummy_pos, Lexing.dummy_pos;
-        };
-        peq_lustre_expr = e2;
-      } in
-      (((new_param, new_decl) :: decl1 @ decl2), vars, Ast_lustre.PEL_when (e1, id, e2))
+    let (decl1, vars, e1) = translate_expr type_decls cenv vars e1_ in
+    let (decl2, vars, e2) = translate_expr type_decls cenv vars e2_ in
+      let decl, e2 =
+        match e2_.pexpr_desc with
+        |PE_ident (id, ty, ck) -> decl1 @ decl2, e2
+        |_ ->
+          let new_name = find_fresh "when_expr" vars in
+          let new_ck   = CKon (e2_.pexpr_ck, id, CKid new_name) in
+          let new_id   = (new_name, e2_.pexpr_ty, new_ck) in
+          let new_e2 = mk_expr (PE_ident new_id) e2_.pexpr_ty new_ck in
+          let (decl, vars, new_e2) = translate_expr type_decls cenv vars new_e2 in
+          let new_param = mk_param cenv new_name e2_.pexpr_ty new_ck in
+          let new_decl = {
+            peq_lustre_patt = {
+              ppatt_desc = PP_ident new_name;
+              ppatt_loc  = Lexing.dummy_pos, Lexing.dummy_pos;
+            };
+            peq_lustre_expr = e2;
+          } in (new_param, new_decl) :: decl1 @ decl2, new_e2 in
+      (decl, vars, Ast_lustre.PEL_when (e1, id, e2))
     |East.PE_merge(e, case_list) ->
       let (decl, vars, cases) = List.fold_right (
         fun ((id, ty, ck), e) (decls, vars, cases) ->
@@ -742,7 +747,7 @@ and translate_expr type_decls cenv vars e =
   in
   let (decl, vars, e_lustre) = translate_desc e.pexpr_desc in
   (decl, vars, { Ast_lustre.pexpr_lustre_desc = e_lustre;
-                Ast_lustre.pexpr_lustre_clk  = CK_base;
+                Ast_lustre.pexpr_lustre_clk  = translate_elustre_ck cenv e.pexpr_ck;
                 Ast_lustre.pexpr_lustre_loc  = e.pexpr_loc})
 ;;
 

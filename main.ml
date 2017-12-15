@@ -123,7 +123,7 @@ let () =
       let pc = Eclock.clock_file p in
 
       if !verbose then begin
-        print_string "    (CLOCKING)\n";
+        print_string "    (CLOCKING ELUS)\n";
         Elustre_printer.print_elustre true pc;
         print_separation ()
       end;
