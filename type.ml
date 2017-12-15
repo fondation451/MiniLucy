@@ -8,7 +8,6 @@ it under the terms of the GNU General Public License v3 as published by
 the Free Software Foundation.
 
 Nicolas ASSOUAD <nicolas.assouad@ens.fr>
-Clément PASCUTTO <clement.pascutto@ens.fr>
 ########
 *)
 
@@ -83,6 +82,15 @@ let type_param ty_map env p =
   |PP_tuple(id_l) -> Ttuple (List.map find id_l)
 ;;
 
+let to_f_op op =
+  match op with
+  |Op_add -> Op_add_f
+  |Op_sub -> Op_sub_f
+  |Op_mul -> Op_mul_f
+  |Op_div -> Op_div_f
+  |Op_mod -> Op_mod
+  |_ -> op
+;;
 
 let rec type_expr const_map ty_map env e vars eqs =
   let (type_env, var_env, node_env) = env in
@@ -110,9 +118,11 @@ let rec type_expr const_map ty_map env e vars eqs =
         raise (Type_Error "Not : must be applied to bool")
     |UOp_minus -> begin
       match e'_t.pexpr_ty with
-      |Tint |Treal -> (mk_expr_from e (PE_op (uop, e'_t)) e'_t.pexpr_ty, vars', eqs')
+      |Tint -> (mk_expr_from e (PE_op (UOp_minus, e'_t)) e'_t.pexpr_ty, vars', eqs')
+      |Treal -> (mk_expr_from e (PE_op (UOp_minus_f, e'_t)) e'_t.pexpr_ty, vars', eqs')
       |_ -> raise (Type_Error "Minus : must be applied to numbers (int or real)")
     end
+    |_ -> assert false
   end
   |PEL_binop (op, e1, e2) -> begin
     let e1_t, vars', eqs' = type_expr const_map ty_map env e1 vars eqs in
@@ -121,7 +131,7 @@ let rec type_expr const_map ty_map env e vars eqs =
     |Op_add |Op_sub |Op_mul |Op_div |Op_mod -> begin
       match e1_t.pexpr_ty, e2_t.pexpr_ty with
       |Tint, Tint -> (mk_expr_from e (PE_binop (op, e1_t, e2_t)) Tint, vars'', eqs'')
-      |Treal, Treal -> (mk_expr_from e (PE_binop (op, e1_t, e2_t)) Treal, vars'', eqs'')
+      |Treal, Treal -> (mk_expr_from e (PE_binop (to_f_op op, e1_t, e2_t)) Treal, vars'', eqs'')
       |_ -> raise (Type_Error "Operation : arithmetics should be performed on numbers (int or real)")
     end
     |Op_eq |Op_neq |Op_lt |Op_le |Op_gt |Op_ge -> begin
@@ -135,6 +145,7 @@ let rec type_expr const_map ty_map env e vars eqs =
         (mk_expr_from e (PE_binop (op, e1_t, e2_t)) lustre_bool_type, vars'', eqs'')
       else
         raise (Type_Error "Operation : logicals should be performed on booleans")
+    |_ -> assert false
   end
   |PEL_if(e1, e2, e3) -> begin
     let e1_t, vars, eqs = type_expr const_map ty_map env e1 vars eqs in
@@ -256,6 +267,21 @@ let rec type_expr const_map ty_map env e vars eqs =
     |Not_found -> raise (Type_Error ("Merge : the variable " ^ id ^ " does not exist"))
     |Type_Error(str) -> raise (Type_Error(str))
   end
+  |PEL_pre(e') ->
+    let e'_t, vars, eqs = type_expr const_map ty_map env e' vars eqs in
+    {
+    pexpr_desc =
+      PE_fby(
+        (match e'_t.pexpr_ty with
+        |Tint -> Cint(0)
+        |Treal -> Creal(0.0)
+        |Ttype(tid) -> Cenum(List.hd (IdentMap.find tid type_env))
+        |Ttuple(_) -> assert false),
+        e'_t);
+    pexpr_ty = e'_t.pexpr_ty;
+    pexpr_clk = e'_t.pexpr_clk;
+    pexpr_loc = e'_t.pexpr_loc;
+    }, vars, eqs
 and type_expr_l const_map ty_map env e_l vars eqs =
   (List.fold_right
     (fun e' (out, vars, eqs) ->

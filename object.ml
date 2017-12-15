@@ -13,6 +13,7 @@ Nicolas ASSOUAD <nicolas.assouad@ens.fr>
 
 open Ast_type;;
 open Ast;;
+open Ast_schedule;;
 open Ast_object;;
 
 exception Object_Error of string;;
@@ -103,66 +104,73 @@ and trans_merge env var_id e =
   |_ -> IOBJ_var_affect(var_id, trans_expr env e)
 
 and trans_eq env eq =
-  let m, si, j, d, s = env in
-  let e = eq.peq_expr in
-  let pat = eq.peq_patt in
-  match e.pexpr_desc with
-  |PE_fby(c, e1) -> begin
-    match pat.ppatt_desc with
-    |PP_ident(id) ->
-      let new_m = IdentMap.add id e.pexpr_ty m in
-      let new_si = (IOBJ_state_affect(id, OBJ_const(c)))::si in
-      let new_s = (control e.pexpr_clk (IOBJ_state_affect(id, trans_expr (new_m, si, j, d, s) e1)))::s in
-      new_m, new_si, j, d, new_s
-    |PP_tuple(id_l) -> assert false
-  end
-  |PE_app(id, e_l, id_reset) -> begin
-    let pattern =
+  match eq with
+  |SP_SKIP ->
+    let m, si, j, d, s = env in
+    let new_s = IOBJ_concurrent::s in
+    m, si, j, d, new_s
+  |SP_EQ(eq) -> begin
+    let m, si, j, d, s = env in
+    let e = eq.peq_expr in
+    let pat = eq.peq_patt in
+    match e.pexpr_desc with
+    |PE_fby(c, e1) -> begin
       match pat.ppatt_desc with
-      |PP_ident(pid) -> [pid]
-      |PP_tuple(pid_l) -> pid_l
-    in
-    let new_instance = gen_new_id () in
-    let new_e_l = List.map (fun e1 -> trans_expr env e1) e_l in
-    let new_si = (IOBJ_reset(new_instance))::si in
-    let new_j = IdentMap.add new_instance id j in
-    let new_s =
-      if id_reset <> lustre_bool_false then
-        (control e.pexpr_clk (IOBJ_step(pattern, new_instance, new_e_l)))::
-        (control e.pexpr_clk (IOBJ_case(id_reset, [lustre_bool_true, IOBJ_reset(new_instance)])))::
-        s
-      else
-        (control e.pexpr_clk (IOBJ_step(pattern, new_instance, new_e_l)))::s
-    in
-    m, new_si, new_j, d, new_s
-  end
-  |_ -> begin
-    match pat.ppatt_desc with
-    |PP_ident(pid) ->
-      let new_s = (control e.pexpr_clk (trans_merge env pid e))::s in
-      m, si, j, d, new_s
-    |PP_tuple(pid_l) -> assert false
+      |PP_ident(id) ->
+        let new_m = IdentMap.add id (e.pexpr_ty, c) m in
+        let new_si = (IOBJ_state_affect(id, OBJ_const(c)))::si in
+        let new_s = (control e.pexpr_clk (IOBJ_state_affect(id, trans_expr (new_m, si, j, d, s) e1)))::s in
+        new_m, new_si, j, d, new_s
+      |PP_tuple(id_l) -> assert false
+    end
+    |PE_app(id, e_l, id_reset) -> begin
+      let pattern =
+        match pat.ppatt_desc with
+        |PP_ident(pid) -> [pid]
+        |PP_tuple(pid_l) -> pid_l
+      in
+      let new_instance = gen_new_id () in
+      let new_e_l = List.map (fun e1 -> trans_expr env e1) e_l in
+      let new_si = (IOBJ_reset(new_instance))::si in
+      let new_j = IdentMap.add new_instance id j in
+      let new_s =
+        if id_reset <> lustre_bool_false then
+          (control e.pexpr_clk (IOBJ_step(pattern, new_instance, new_e_l)))::
+          (control e.pexpr_clk (IOBJ_case(id_reset, [lustre_bool_true, IOBJ_reset(new_instance)])))::
+          s
+        else
+          (control e.pexpr_clk (IOBJ_step(pattern, new_instance, new_e_l)))::s
+      in
+      m, new_si, new_j, d, new_s
+    end
+    |_ -> begin
+      match pat.ppatt_desc with
+      |PP_ident(pid) ->
+        let new_s = (control e.pexpr_clk (trans_merge env pid e))::s in
+        m, si, j, d, new_s
+      |PP_tuple(pid_l) -> assert false
+    end
   end
 ;;
 
 let rec trans_eqs env eqs = List.fold_left trans_eq env eqs;;
 
 let trans_node node =
-  let new_inputs = List.map (fun input -> input.param_id, input.param_ty) node.pn_input in
-  let new_outputs = List.map (fun output -> output.param_id, output.param_ty) node.pn_output in
+  let new_inputs = List.map (fun input -> input.param_id, input.param_ty) node.spn_input in
+  let new_outputs = List.map (fun output -> output.param_id, output.param_ty) node.spn_output in
   let var_map =
     List.fold_left
       (fun out v -> IdentMap.add v.param_id v.param_ty out)
       IdentMap.empty
-      (List.rev_append node.pn_input (List.rev_append node.pn_local node.pn_output)) in
-  let m, si, j, d, s = trans_eqs (IdentMap.empty, [], IdentMap.empty, var_map, []) node.pn_equs in
-  let name = node.pn_name in
+      (List.rev_append node.spn_input (List.rev_append node.spn_local node.spn_output)) in
+  let m, si, j, d, s = trans_eqs (IdentMap.empty, [], IdentMap.empty, var_map, []) node.spn_equs in
+  let name = node.spn_name in
   let memory = IdentMap.bindings m in
   let instance = IdentMap.bindings j in
   let var_p =
     List.filter
-      (fun x -> not (List.mem x memory))
-      (List.filter (fun (id, _) -> not (List.exists (fun p -> p.param_id = id) node.pn_input)) (IdentMap.bindings d))
+      (fun (id, _) -> not (List.mem_assoc id memory))
+      (List.filter (fun (id, _) -> not (List.exists (fun p -> p.param_id = id) node.spn_input)) (IdentMap.bindings d))
   in
   let reset = si in
   let step = (new_inputs, new_outputs, var_p, join_list (List.rev s)) in

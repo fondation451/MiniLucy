@@ -8,7 +8,6 @@ it under the terms of the GNU General Public License v3 as published by
 the Free Software Foundation.
 
 Nicolas ASSOUAD <nicolas.assouad@ens.fr>
-Cl�ment PASCUTTO <clement.pascutto@ens.fr>
 ########
 *)
 
@@ -215,6 +214,7 @@ expr:
 |const_fby FBY expr {mk_expr (PEL_fby ($1, $3))}
 |MINUS expr /* %prec uminus */ {mk_expr (PEL_op (UOp_minus, $2))}
 |NOT expr {mk_expr (PEL_op (UOp_not, $2))}
+|PRE expr {mk_expr (PEL_pre ($2))}
 (*|LPAREN expr COMMA expr_comma_list RPAREN {mk_expr (PEL_tuple ($2::$4))}*)
 |e1 = expr; WHEN; id = IDENT; LPAREN; e2 = expr; RPAREN {mk_expr (PEL_when (e1, id, e2))}
 |CURRENT expr {mk_expr (PEL_current ($2))}

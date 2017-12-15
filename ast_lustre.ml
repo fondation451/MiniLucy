@@ -8,7 +8,6 @@ it under the terms of the GNU General Public License v3 as published by
 the Free Software Foundation.
 
 Nicolas ASSOUAD <nicolas.assouad@ens.fr>
-Clément PASCUTTO <clement.pascutto@ens.fr>
 ########
 *)
 
@@ -32,6 +31,7 @@ and p_expr_lustre_desc =
   |PEL_when of p_expr_lustre * ident * p_expr_lustre
   |PEL_current of p_expr_lustre
   |PEL_merge of ident * (ident * p_expr_lustre) list
+  |PEL_pre of  p_expr_lustre
 ;;
 
 type p_equation_lustre = {

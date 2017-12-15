@@ -8,7 +8,6 @@ it under the terms of the GNU General Public License v3 as published by
 the Free Software Foundation.
 
 Nicolas ASSOUAD <nicolas.assouad@ens.fr>
-Clément PASCUTTO <clement.pascutto@ens.fr>
 ########
 *)
 
@@ -36,6 +35,7 @@ type obj_instr =
   |IOBJ_step of ident list * ident * obj_expr list
   |IOBJ_case of ident * (ident * obj_instr) list
   |IOBJ_sequence of obj_instr * obj_instr
+  |IOBJ_concurrent
 ;;
 
 type obj_reset = obj_instr list;;

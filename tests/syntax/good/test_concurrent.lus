@@ -1,0 +1,16 @@
+node n(a,b,c: int) returns(out1,out2: int);
+var d,e,f,g: int;
+let
+  d = a + b;
+  e = a + d + c;
+  f = b;
+  g = e + b + f;
+  out1 = g + c;
+  out2 = e + f;
+tel
+
+
+node main(a, b, c: int) returns (o1, o2: int);
+let
+  (o1, o2) = n(a, b, c);
+tel
