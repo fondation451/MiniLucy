@@ -270,11 +270,6 @@ and type_let tdef tenv tfun decl =
     | _ -> tenv in
   tenv, type_decl tdef tenv tfun decl
 and type_decl tdef tenv tfun decl =
-  print_string "\n\n--------------\n";
-  Elustre_printer.print_decl true decl; print_newline (); print_newline ();
-  IdentMap.iter (fun k ty -> print_string k; print_string " : "; Elustre_printer.print_typ true ty; print_newline ()) tenv;
-  IdentMap.iter (fun k ty -> print_string k; print_string " : "; Elustre_printer.print_typ true ty; print_newline ()) tfun;
-  print_string "\n----------------\n\n";
   let d =
       match decl.pdecl_desc with
       |PD_skip                 -> PD_skip

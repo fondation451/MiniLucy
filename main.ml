@@ -120,7 +120,7 @@ let () =
 
       (* TRANSLATION TO AST *)
 
-      let ast_lustre = Easttoast.translate_file p_elustre in
+      let ast_lustre = Easttoast.translate_file p in
 
       if !verbose then begin
         print_string "    (TRANSLATION TO LUS)\n";
