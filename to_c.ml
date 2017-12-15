@@ -38,13 +38,13 @@ let str_ty ty =
 let str_uop uop =
   match uop with
   |UOp_not -> "!"
-  |UOp_minus -> "-"
+  |UOp_minus |UOp_minus_f -> "-"
 ;;
 
 let str_op op =
   match op with
   |Op_eq -> "==" |Op_neq -> "!=" |Op_lt -> "<" |Op_le -> "<=" |Op_gt -> ">" |Op_ge -> ">="
-  |Op_add -> "+" |Op_sub -> "-" |Op_mul -> "*" |Op_div -> "/" |Op_mod -> "%"
+  |Op_add |Op_add_f -> "+" |Op_sub |Op_sub_f -> "-" |Op_mul |Op_mul_f -> "*" |Op_div |Op_div_f -> "/" |Op_mod -> "%"
   |Op_and -> "&&" |Op_or -> "||" |Op_impl -> raise Impl_Op
 ;;
 
@@ -136,6 +136,7 @@ let rec instr_to_c instance i code =
     instr_to_c instance i1 code;
     code <<< "\n";
     instr_to_c instance i2 code
+  |IOBJ_concurrent -> ()
 ;;
 
 let def_to_c def code =
@@ -144,7 +145,7 @@ let def_to_c def code =
   (* memory *)
   code <<< "typedef struct {\nchar ____dummy___;\n";
   List.iter
-    (fun (id, ty) ->
+    (fun (id, (ty, c)) ->
       code <<< (str_ty ty);
       code <<< " ";
       code <<< id;
@@ -221,7 +222,7 @@ let def_to_c def code =
   code <<< "\n";
   code <<< "\n";
   List.iter
-    (fun (id, ty) ->
+    (fun (id, (ty, c)) ->
       code <<< (str_ty ty);
       code <<< " ";
       code <<< id;

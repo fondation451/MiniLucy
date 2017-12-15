@@ -8,7 +8,6 @@ it under the terms of the GNU General Public License v3 as published by
 the Free Software Foundation.
 
 Nicolas ASSOUAD <nicolas.assouad@ens.fr>
-Clément PASCUTTO <clement.pascutto@ens.fr>
 ########
 *)
 
@@ -41,6 +40,7 @@ Clément PASCUTTO <clement.pascutto@ens.fr>
       "node", NODE;
       "not", NOT;
       "or", OR;
+      "pre", PRE;
       "real", REAL;
       "returns", RETURNS;
       "tel", TEL;

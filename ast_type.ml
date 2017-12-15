@@ -8,7 +8,6 @@ it under the terms of the GNU General Public License v3 as published by
 the Free Software Foundation.
 
 Nicolas ASSOUAD <nicolas.assouad@ens.fr>
-Clément PASCUTTO <clement.pascutto@ens.fr>
 ########
 *)
 
@@ -19,7 +18,7 @@ type ident = string;;
 let ident_from_string str = str;;
 
 let gen_new_id =
-  let cpt = ref 0 in fun () -> incr cpt; "__aux"^(string_of_int !cpt)
+  let cpt = ref 1 in fun () -> incr cpt; "__aux"^(string_of_int !cpt)
 ;;
 
 module IdentMap = Map.Make(struct
@@ -39,6 +38,7 @@ type lustre_ty =
   |Ttuple of lustre_ty list
 ;;
 
+let dumb_id = "__aux0";;
 let lustre_bool_type = Ttype "bool";;
 let lustre_bool_true = "True";;
 let lustre_bool_false = "False";;
@@ -63,10 +63,12 @@ type clock_t =
 type uop =
   |UOp_not
   |UOp_minus
+  |UOp_minus_f
 ;;
 
 type op =
   |Op_eq |Op_neq |Op_lt |Op_le |Op_gt |Op_ge
   |Op_add |Op_sub |Op_mul |Op_div |Op_mod
+  |Op_add_f |Op_sub_f |Op_mul_f |Op_div_f
   |Op_and |Op_or |Op_impl
 ;;

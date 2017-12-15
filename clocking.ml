@@ -8,7 +8,6 @@ it under the terms of the GNU General Public License v3 as published by
 the Free Software Foundation.
 
 Nicolas ASSOUAD <nicolas.assouad@ens.fr>
-Clément PASCUTTO <clement.pascutto@ens.fr>
 ########
 *)
 
@@ -155,7 +154,10 @@ let check_eq env eq =
     print_string ("AQUI "^ id ^ "\n");
     let ck_id = IdentMap.find id var_env in
     if ck_id = CK_free then
-      eq', node_env, IdentMap.add id ck var_env
+      if ck = CK_free then
+        {eq' with peq_expr = {e' with pexpr_clk = CK_base}}, node_env, IdentMap.add id CK_base var_env
+      else
+        eq', node_env, IdentMap.add id ck var_env
     else if ck = CK_free then
       {eq' with peq_expr = {e' with pexpr_clk = ck_id}}, node_env, var_env
     else if ck_id = ck then

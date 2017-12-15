@@ -8,7 +8,6 @@ it under the terms of the GNU General Public License v3 as published by
 the Free Software Foundation.
 
 Nicolas ASSOUAD <nicolas.assouad@ens.fr>
-Clément PASCUTTO <clement.pascutto@ens.fr
 ########
 *)
 
@@ -16,6 +15,7 @@ open Format;;
 open Ast_type;;
 open Ast;;
 open Ast_lustre;;
+open Ast_schedule;;
 open Ast_object;;
 
 let print_separated_list print_fn sep l =
@@ -64,6 +64,7 @@ let string_of_uop o =
   match o with
   |UOp_not -> "not"
   |UOp_minus -> "-"
+  |UOp_minus_f -> "-."
 ;;
 
 let string_of_op o =
@@ -78,6 +79,10 @@ let string_of_op o =
   |Op_sub -> "-"
   |Op_mul -> "*"
   |Op_div -> "/"
+  |Op_add_f -> "+."
+  |Op_sub_f -> "-."
+  |Op_mul_f -> "*."
+  |Op_div_f -> "/."
   |Op_mod -> "mod"
   |Op_and -> "and"
   |Op_or -> "or"
@@ -143,6 +148,9 @@ let rec print_expr_lustre e =
                             print_string " -> ";
                             print_expr_lustre e;
                             print_string ")") " " e_l
+  |PEL_pre(e) ->
+    print_string "pre ";
+    print_expr_lustre e
 ;;
 
 let print_equation_lustre e =
@@ -202,6 +210,12 @@ let print_lustre f =
     print_newline ();
   close_box ()
 ;;
+
+
+
+
+
+(* TYPED LUSTRE *)
 
 let rec print_expr e =
   match e.pexpr_desc with
@@ -301,6 +315,58 @@ let print f =
   close_box ()
 ;;
 
+
+(* SCHEDULED LUSTRE *)
+
+let print_equation_sched e =
+  match e with
+  |SP_SKIP -> print_string "CONCURRENT BREAK POINT"
+  |SP_EQ(e') ->
+    (match e'.peq_patt.ppatt_desc with
+       |PP_ident(id) -> print_id id
+       |PP_tuple(id_l) -> print_separated_list print_id ", " id_l);
+    print_string " = ";
+    print_expr e'.peq_expr;
+    print_string "    [";
+    print_ck_const e'.peq_expr.pexpr_clk;
+    print_string "]"
+;;
+
+let print_node_sched n =
+  print_string "node ";
+  print_id n.spn_name;
+  print_space ();
+  print_string "(";
+  print_separated_list print_var_decl ", " n.spn_input;
+  print_string ")";
+  print_space ();
+  print_string "returns (";
+  print_separated_list print_var_decl ", " n.spn_output;
+  print_string ");\n";
+  if List.length n.spn_local > 0 then print_string "var ";
+  open_hovbox 2;
+    print_separated_list print_var_decl ";\n" n.spn_local;
+    print_string ";\n";
+  close_box ();
+  print_string "let";
+  print_newline ();
+  open_hovbox 2;
+    print_separated_list print_equation_sched ";\n" n.spn_equs;
+    print_string ";\n";
+  close_box ();
+  print_string "tel"
+;;
+
+let print_sched f =
+  let type_decs, node_decs = f in
+  open_hovbox 0;
+    print_separated_list print_node_sched "\n\n" node_decs;
+    print_newline ();
+  close_box ()
+;;
+
+(* OBJECT *)
+
 let rec print_obj_expr e =
   match e with
   |OBJ_const(c) -> print_const c
@@ -330,6 +396,7 @@ let rec print_obj_instr i =
     print_separated_list (fun (oid, oi) -> print_id oid; print_string " : "; print_obj_instr oi) "; " case_l;
     print_string "}"
   |IOBJ_sequence(i1, i2) -> print_obj_instr i1; print_string ";\n"; print_obj_instr i2
+  |IOBJ_concurrent -> print_string "CONCURRENT BREAK POINT"
 ;;
 
 let print_obj_def o =
@@ -339,7 +406,7 @@ let print_obj_def o =
   print_string "machine ";
   print_id f;
   print_string " =\nmemory = ";
-  print_separated_list print_var ", " m;
+  print_separated_list print_var ", " (List.map (fun (id, (ty, c)) -> (id, ty)) m);
   print_string "\ninstances = ";
   print_separated_list (fun (id1, id2) -> print_id id1; print_string " : "; print_id id2) ", " j;
   print_string "\nreset() = ";

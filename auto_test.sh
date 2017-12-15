@@ -9,6 +9,9 @@ compiler=minilucy
 score=0
 max=0
 verbose=0
+target_c=false
+output_compiler=gcc
+output_extension=c
 
 echo -n "Test de $compiler"
 
@@ -290,15 +293,21 @@ timeout="why3-cpulimit 30 0 -h"
 
 for f in tests/syntax/good/*.$ext; do
   echo -n "."
-  c_file=tests/syntax/good/`basename $f .$ext`.c
+  if $target_c; then
+    c_file=tests/syntax/good/`basename $f .$ext`.c
+  else
+    c_file=tests/syntax/good/`basename $f .$ext`.ml
+  fi
+
   rm -f $c_file
   expected=tests/syntax/good//`basename $f .$ext`.lout
   input_f=tests/syntax/good/`basename $f .$ext`.lin
   max=`expr $max + 1`;
-  if compile $f; then
+  if ($target_c && compile -clang $f) || (! $target_c && compile $f); then
     rm -f out
     score_comp=`expr $score_comp + 1`;
-    if gcc $c_file && eval "./a.out $input_f > out"; then
+    echo $c_file
+    if ($target_c && gcc $c_file && eval "./a.out $input_f > out") || (ocamlopt -thread unix.cmxa threads.cmxa $c_file && eval "./a.out $input_f > out"); then
       score_out=`expr $score_out + 1`;
       if cmp --quiet out $expected; then
         score_test=`expr $score_test + 1`;
@@ -363,6 +372,8 @@ test () {
 case $option in
     "-v"    )
       verbose=1;;
+    "-clang" )
+      target_c=true;;
     "-lus"  )
       test_lus=1
       test_elus=0;;

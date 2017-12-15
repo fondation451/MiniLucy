@@ -8,7 +8,6 @@ it under the terms of the GNU General Public License v3 as published by
 the Free Software Foundation.
 
 Nicolas ASSOUAD <nicolas.assouad@ens.fr>
-Clément PASCUTTO <clement.pascutto@ens.fr>
 ########
 *)
 
@@ -23,6 +22,7 @@ let clock_only = ref false;;
 let normalize_only = ref false;;
 let schedule_only = ref false;;
 let object_only = ref false;;
+let target_c = ref false;;
 
 let verbose = ref false;;
 
@@ -40,6 +40,7 @@ let options = [
   "--normalize-only", Arg.Set normalize_only, "  Execute only normalization";
   "--schedule-only", Arg.Set schedule_only, "  Execute only schedule";
   "--object-only", Arg.Set object_only, "  Execute only transformation to object code";
+  "-clang", Arg.Set target_c, "  C file generation";
   "-v", Arg.Set verbose, "  Verbose mode"
 ];;
 
@@ -188,7 +189,7 @@ let () =
 
       if !verbose then begin
         print_string "    (SCHEDULING)\n";
-        Lustre_printer.print ps;
+        Lustre_printer.print_sched ps;
         print_separation ()
       end;
 
@@ -209,9 +210,12 @@ let () =
         exit 0;
       end;
 
-      let source = To_c.file_to_c po in
-
-      Export_source.export (f_name ^ ".c") source;
+      if !target_c then
+        let source = To_c.file_to_c po in
+        Export_source.export (f_name ^ ".c") source
+      else
+        let source = To_caml.file_to_caml po in
+        Export_source.export (f_name ^ ".ml") source;
 
       exit 0;
     with
