@@ -44,11 +44,11 @@ let mk_expr_from e e_v ty = {
   pexpr_loc = e.pexpr_lustre_loc;
 };;
 
-let type_const c =
+let type_const c ty_map =
   match c with
   |Cint(i) -> Tint
   |Creal(f) -> Treal
-  |_ -> assert false
+  |Cenum(id) -> IdentMap.find id ty_map
 ;;
 
 let type_id ty_map env id = try
@@ -95,11 +95,11 @@ let to_f_op op =
 let rec type_expr const_map ty_map env e vars eqs =
   let (type_env, var_env, node_env) = env in
   match e.pexpr_lustre_desc with
-  |PEL_const c -> (mk_expr_from e (PE_const c) (type_const c), vars, eqs)
+  |PEL_const c -> (mk_expr_from e (PE_const c) (type_const c ty_map), vars, eqs)
   |PEL_ident id -> begin
     try
       let const_v = List.assoc id const_map in
-      (mk_expr_from e (PE_const(const_v)) (type_const const_v), vars, eqs)
+      (mk_expr_from e (PE_const(const_v)) (type_const const_v ty_map), vars, eqs)
     with Not_found -> try
       let enum_ty = IdentMap.find id ty_map in
       (mk_expr_from e (PE_const(Cenum(id))) enum_ty, vars, eqs)
@@ -327,10 +327,10 @@ let mk_ty_map f =
   List.fold_left (fun out (ty, l_enum) -> List.fold_left (fun out enum -> IdentMap.add enum (Ttype(ty)) out) out l_enum) IdentMap.empty full_ty
 ;;
 
-let mk_env f =
+let mk_env f ty_map =
   let f_ty, f_const, f_node_l = f in
   let ty_env = f_ty in
-  let var_env = List.fold_left (fun out (id, c) -> IdentMap.add id (type_const c) out) IdentMap.empty f_const in
+  let var_env = List.fold_left (fun out (id, c) -> IdentMap.add id (type_const c ty_map) out) IdentMap.empty f_const in
   let node_env = List.fold_left (fun out node -> IdentMap.add node.pn_lustre_name node out) IdentMap.empty f_node_l in
   (ty_env, var_env, node_env)
 ;;
@@ -338,6 +338,6 @@ let mk_env f =
 let type_file f =
   let f_ty, f_const, f_node_l = f in
   let ty_map = mk_ty_map f in
-  let env = mk_env f in
+  let env = mk_env f ty_map in
   (f_ty, List.map (type_node f_const ty_map env) f_node_l)
 ;;
