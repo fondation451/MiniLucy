@@ -42,6 +42,7 @@ Clément PASCUTTO <clement.pascutto@ens.fr>
       "where", WHERE;
       "type", TYPE;
       "pre", PRE;
+      "on", ON;
 
       "clock", CLK;
       "last", LAST;

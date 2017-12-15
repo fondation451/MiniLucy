@@ -1,7 +1,7 @@
 LUS_I=ast_type.cmo ast.cmo ast_lustre.cmo ast_object.cmo ast_schedule.cmo lustre_printer.cmo type.cmo clocking.cmo normalize.cmo schedule.cmo object.cmo to_c.cmo to_caml.cmo export_source.cmo parser.cmi parser.cmo lexer.cmo
 LUS=ast_type.cmo ast.cmo ast_lustre.cmo ast_object.cmo ast_schedule.cmo lustre_printer.cmo type.cmo clocking.cmo normalize.cmo schedule.cmo object.cmo to_c.cmo to_caml.cmo export_source.cmo parser.cmo lexer.cmo
-ELUS_I=east.cmo elustre_printer.cmo eparser.cmi eparser.cmo elexer.cmo etype.cmo easttoast.cmo
-ELUS=east.cmo elustre_printer.cmo eparser.cmo elexer.cmo etype.cmo easttoast.cmo
+ELUS_I=east.cmo elustre_printer.cmo eparser.cmi eparser.cmo elexer.cmo etype.cmo eclock.cmo easttoast.cmo
+ELUS=east.cmo elustre_printer.cmo eparser.cmo elexer.cmo etype.cmo eclock.cmo easttoast.cmo
 COMMON=main.cmo
 GENERATED_LUS=lexer.ml parser.ml parser.mli parser.automaton parser.conflicts
 GENERATED_ELUS=elexer.ml eparser.ml eparser.mli eparser.automaton eparser.conflicts

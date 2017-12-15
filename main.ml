@@ -119,9 +119,20 @@ let () =
 
       if !type_only then exit 0;
 
+      (* CLOCKING *)
+      let pc = Eclock.clock_file p in
+
+      if !verbose then begin
+        print_string "    (CLOCKING)\n";
+        Elustre_printer.print_elustre true pc;
+        print_separation ()
+      end;
+
+      if !clock_only then exit 0;
+
       (* TRANSLATION TO AST *)
 
-      let ast_lustre = Easttoast.translate_file p in
+      let ast_lustre = Easttoast.translate_file pc in
 
       if !verbose then begin
         print_string "    (TRANSLATION TO LUS)\n";

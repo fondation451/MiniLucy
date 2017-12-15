@@ -27,26 +27,33 @@ Cl�ment PASCUTTO <clement.pascutto@ens.fr>
     ];;
 
   let ty_env = Hashtbl.create 100;;
-  let add_env id ty = Hashtbl.add ty_env id ty;;
-  let clear_env () = Hashtbl.clear ty_env;;
+  let add_ty_env id ty = Hashtbl.add ty_env id ty;;
+  let clear_ty_env () = Hashtbl.clear ty_env;;
 
-  let const_env = Hashtbl.create 100;;
-  let add_const c ty = Hashtbl.add const_env c ty;;
+  let ck_env = Hashtbl.create 100;;
+  let add_ck_env id ck = Hashtbl.add ck_env id ck;;
+  let clear_ck_env () = Hashtbl.clear ck_env;;
+
+  let const_ty_env = Hashtbl.create 100;;
+  let add_ty_const c ty = Hashtbl.add const_ty_env c ty;;
   let _ =
-    List.iter (fun (s,k) -> Hashtbl.add const_env s k) [
+    List.iter (fun (s,k) -> add_ty_const s k) [
       "True", bool_type;
       "False", bool_type;
     ];;
 
-  let loc ()         = symbol_start_pos (), symbol_end_pos ();;
-  let mk_ty ty       = try Hashtbl.find ty_map ty with Not_found -> Ttype ty;;
-  let mk_id id       = (id, try Hashtbl.find ty_env id with |Not_found ->
-                            try Hashtbl.find const_env id with |Not_found -> none_type);;
-  let mk_expr e      = {pexpr_desc = e; pexpr_ty = none_type; pexpr_loc = loc ()};;
-  let mk_decl d      = {pdecl_desc = d; pdecl_loc = loc ()}
-  let mk_patt p      = {ppatt_desc = p; ppatt_loc = loc ()};;
-  let mk_param id ty = {param_id = id; param_ty = ty; param_ck = CK_base};;
-    (* Dummy values for clk and ty, they will be set during typing and clocking*)
+  let loc ()            = symbol_start_pos (), symbol_end_pos ();;
+  let mk_ty ty          = try Hashtbl.find ty_map ty with Not_found -> Ttype ty;;
+  let mk_ckid id        = if String.equal (String.lowercase_ascii id) "base" then CKbase else CKid id;;
+  let mk_id id          = (id, (try Hashtbl.find ty_env id with |Not_found ->
+                                try Hashtbl.find const_ty_env id with |Not_found -> none_type),
+                               try Hashtbl.find ck_env id with |Not_found -> CKbase);;
+  let mk_expr e         = {pexpr_desc = e; pexpr_ty = none_type;
+                           pexpr_ck = none_clock; pexpr_loc = loc ()};;
+  let mk_decl d         = {pdecl_desc = d; pdecl_loc = loc ()}
+  let mk_patt p         = {ppatt_desc = p; ppatt_loc = loc ()};;
+  let mk_param id ty ck = {param_id = id; param_ty = ty; param_ck = ck};;
+    (* Dummy values for clock and ty, they will be set during typing and clocking*)
 
 %}
 
@@ -58,7 +65,7 @@ Cl�ment PASCUTTO <clement.pascutto@ens.fr>
 %token NODE
 %token COMMA ARROW IMPL SEMICOL SLASH VBAR COLON
 %token IF THEN ELSE LET IN FBY MERGE WHEN LAST UNTIL UNLESS AUTOMATON EVERY
-%token CONTINUE DO WITH RESET MATCH WHERE TYPE PRE END TEL
+%token CONTINUE DO WITH RESET MATCH WHERE TYPE PRE END TEL ON
 %token LPAREN RPAREN
 %token CLK
 %token EQUAL NEQ PLUS MINUS STAR MOD AND NOT OR
@@ -94,14 +101,14 @@ enum_types:
 enum_type:
 |TYPE IDENT {($2, [])}
 |TYPE IDENT EQUAL separated_list(PLUS, IDENT) {
-  let _ = List.iter (fun id -> add_const id (Ttype $2)) $4 in
+  let _ = List.iter (fun id -> add_ty_const id (Ttype $2)) $4 in
    ($2, $4)
   }
 ;
 
 node_decs:
 |/* empty */    {[]}
-|node node_decs {let _ = clear_env () in $1 :: $2}
+|node node_decs {let _ = clear_ty_env (); clear_ck_env () in $1 :: $2}
 ;
 
 node:
@@ -143,12 +150,20 @@ param_list:
 
 param:
 |ident_space_list COLON typ {List.map (
-    fun id -> let _ = add_env id $3 in mk_param id $3
+    fun id -> let _ = add_ty_env id $3; add_ck_env id CKbase in mk_param id $3 CKbase
+    ) $1}
+|ident_space_list COLON typ COLON clock {List.map (
+    fun id -> let _ = add_ty_env id $3; add_ck_env id $5 in mk_param id $3 $5
     ) $1}
 ;
 
 typ:
 |IDENT   {mk_ty $1}
+;
+
+clock:
+|IDENT   {mk_ckid $1}
+|clock ON IDENT LPAREN clock RPAREN {CKon ($1, $3, $5)}
 ;
 
 decl:
@@ -158,7 +173,8 @@ decl:
 |decl SEMICOL decl {mk_decl (PD_and($1, $3))}
 |pattern EQUAL expr {mk_decl (PD_eq({peq_patt = $1; peq_expr = $3}))}
 |CLK IDENT EQUAL expr {mk_decl (PD_clk(mk_id $2, $4))}
-|CLK IDENT COLON typ EQUAL expr {mk_decl (PD_clk(($2, $4), $6))}
+|CLK IDENT COLON typ EQUAL expr {mk_decl (PD_clk(($2, $4, CKbase), $6))}
+|CLK IDENT COLON typ COLON clock EQUAL expr {mk_decl (PD_clk(($2, $4, $6), $8))}
 |LET decl IN decl {mk_decl (PD_let_in($2, $4))}
 |MATCH expr WITH match_case_list {mk_decl (PD_match($2, $4))}
 |RESET decl EVERY expr {mk_decl (PD_reset($2, $4))}

@@ -29,14 +29,28 @@ let rec str_of_elustre_ty verb t =
 
 let print_typ verb t = print_string (str_of_elustre_ty verb t);;
 
+let rec str_of_elustre_ck verb c =
+  match c with
+  |CKbase  -> "BASE"
+  |CKid id -> id
+  |CKon (ck1, id1, ck2) -> String.concat "" [
+    str_of_elustre_ck verb ck1; " on "; id1; "("; str_of_elustre_ck verb ck1; ")"]
+  |CKfun (ck1, ck2) ->
+    String.concat " " [str_of_elustre_ck verb ck1; "->"; str_of_elustre_ck verb ck2]
+;;
+
+let print_ck verb ck = print_string (str_of_elustre_ck verb ck);;
+
 let print_id verb id = print_id id;;
 
-let print_id_ty v (id, ty) =
+let print_id_ty_ck v (id, ty, ck) =
   if v then print_string "(";
   print_id v id;
   if v then begin
     print_string " : ";
     print_typ v ty;
+    print_string " ";
+    print_ck v ck;
     print_string ")"
   end
 ;;
@@ -44,7 +58,9 @@ let print_id_ty v (id, ty) =
 let print_param verb p =
   print_id verb p.param_id;
   print_string " : ";
-  print_typ verb p.param_ty;;
+  print_typ verb p.param_ty;
+  print_string " ";
+  print_ck verb p.param_ck;;
 
 let print_type_decl verb ty_decl =
   let (id,decl) = ty_decl in
@@ -66,7 +82,7 @@ let rec print_decl verb d =
   |PD_eq(eq) -> print_equation verb eq
   |PD_clk(id, expr) ->
     print_string "clock ";
-    print_id_ty verb id;
+    print_id_ty_ck verb id;
     print_string " = ";
     print_expr verb expr
   |PD_let_in(d1, d2) ->
@@ -80,7 +96,7 @@ let rec print_decl verb d =
     print_string " with\n  ";
     print_separated_list  (fun (id, d) ->
                             print_string "|";
-                            print_id_ty verb id;
+                            print_id_ty_ck verb id;
                             print_string " -> ";
                             print_decl verb d;
                             print_string "\n") "  " case_list
@@ -93,7 +109,7 @@ let rec print_decl verb d =
     print_string "automaton\n  ";
     print_separated_list  (fun (id, psv, psc) ->
                             print_string "|";
-                            print_id_ty verb id;
+                            print_id_ty_ck verb id;
                             print_string " -> ";
                             print_shared verb psv;
                             print_string " ";
@@ -117,14 +133,14 @@ and print_strong verb sc =
     print_string "unless ";
     print_expr verb expr;
     print_string " then ";
-    print_id_ty verb id;
+    print_id_ty_ck verb id;
     print_string " ";
     print_strong verb sc
   |PSC_unless_cont(expr, id, sc) ->
     print_string "unless ";
     print_expr verb expr;
     print_string " continue ";
-    print_id_ty verb id;
+    print_id_ty_ck verb id;
     print_string " ";
     print_strong verb sc
   |PSC_epsilon -> ()
@@ -134,21 +150,21 @@ and print_weak verb wc =
     print_string "until ";
     print_expr verb expr;
     print_string " then ";
-    print_id_ty verb id;
+    print_id_ty_ck verb id;
     print_string " ";
     print_weak verb wc
   |PWC_until_cont(expr, id, wc) ->
     print_string "until ";
     print_expr verb expr;
     print_string " continue ";
-    print_id_ty verb id;
+    print_id_ty_ck verb id;
     print_string " ";
     print_weak verb wc
   |PWC_epsilon -> ()
 and print_expr verb e =
   match e.pexpr_desc with
   |PE_const(c) -> print_const c
-  |PE_ident(id) -> print_id_ty verb id
+  |PE_ident(id) -> print_id_ty_ck verb id
   |PE_uop(op, e) ->
     print_string (string_of_uop op);
     print_expr verb e;
@@ -169,7 +185,7 @@ and print_expr verb e =
     print_string " else ";
     print_expr verb e''
   |PE_app(id, exp_l, e) ->
-    print_id_ty verb id;
+    print_id_ty_ck verb id;
     print_string "(";
     print_separated_list (print_expr verb) ", " exp_l;
     print_string ")";
@@ -181,6 +197,8 @@ and print_expr verb e =
     if verb then begin
       print_string " : ";
       print_typ verb e.pexpr_ty;
+      print_string " ";
+      print_ck verb e.pexpr_ck;
       print_string ")"
     end;
     print_string " fby ";
@@ -197,6 +215,8 @@ and print_expr verb e =
     if verb then begin
       print_string " : ";
       print_typ verb e.pexpr_ty;
+      print_string " ";
+      print_ck verb e.pexpr_ck;
       print_string ")"
     end;
     print_string "(";
@@ -208,13 +228,13 @@ and print_expr verb e =
     print_string " ";
     print_separated_list (fun (id, e) ->
                             print_string "(";
-                            print_id_ty verb id;
+                            print_id_ty_ck verb id;
                             print_string " -> ";
                             print_expr verb e;
                             print_string ")") " " e_l
   |PE_last(id) ->
     print_string "last ";
-    print_id_ty verb id;
+    print_id_ty_ck verb id;
 and print_equation verb e =
   (match e.peq_patt.ppatt_desc with
      |PP_ident(id) ->
@@ -223,6 +243,8 @@ and print_equation verb e =
       if verb then begin
         print_string " : ";
         print_typ verb e.peq_expr.pexpr_ty;
+        print_string " ";
+        print_ck verb e.peq_expr.pexpr_ck;
         print_string ")"
       end;
      |PP_tuple(id_l) -> print_separated_list (print_id verb) ", " id_l);
